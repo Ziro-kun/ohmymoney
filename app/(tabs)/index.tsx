@@ -3,26 +3,26 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
+  AppState,
+  AppStateStatus,
   Dimensions,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  AppState,
-  AppStateStatus,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  AI_STRATEGIES,
+  ANNUAL_INTEREST_RATE,
+  SEVERITY_RATIO_MODERATE,
+  SEVERITY_RATIO_SEVERE,
+} from "../../constants/finance";
 import { AppColorScheme } from "../../constants/theme";
 import { useAppTheme } from "../../hooks/useAppTheme";
 import { useFinanceStore } from "../../src/store/useFinanceStore";
 import { formatNumber } from "../../src/utils/format";
-import {
-  ANNUAL_INTEREST_RATE,
-  AI_STRATEGIES,
-  SEVERITY_RATIO_MODERATE,
-  SEVERITY_RATIO_SEVERE,
-} from "../../constants/finance";
 
 const { width } = Dimensions.get("window");
 
@@ -92,7 +92,10 @@ export default function DashboardScreen() {
         setLiveBalance(lastRefValue - elapsed * perSecondBurnRate);
       }
     };
-    const subscription = AppState.addEventListener("change", handleAppStateChange);
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange,
+    );
     return () => subscription.remove();
   }, [isInitialized, lastRefTime, lastRefValue, perSecondBurnRate]);
 
@@ -127,8 +130,8 @@ export default function DashboardScreen() {
   }
 
   const liveBalanceStr = liveBalance.toFixed(1);
-  const parts = liveBalanceStr.startsWith("-") 
-    ? liveBalanceStr.substring(1).split(".") 
+  const parts = liveBalanceStr.startsWith("-")
+    ? liveBalanceStr.substring(1).split(".")
     : liveBalanceStr.split(".");
   const integerPart = formatNumber(parts[0]);
   const decimalPart = parts[1];
@@ -219,7 +222,9 @@ export default function DashboardScreen() {
           <View style={styles.statsCard}>
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>하루 고정 유지비 (Burn Rate)</Text>
-              <Text style={styles.statValue}>₩{formatNumber(dailyBurnRate)}</Text>
+              <Text style={styles.statValue}>
+                ₩{formatNumber(dailyBurnRate)}
+              </Text>
             </View>
             <Text style={styles.statSubtext}>
               현재 내 자산을 유지하기 위해 필요한 일일 최소 금액입니다.
@@ -237,16 +242,21 @@ export default function DashboardScreen() {
                   dailyInterestRate);
               const requiredDailyWithCompound =
                 compoundLossOver30Days / daysToRecover;
-              const formattedRequiredDaily = formatNumber(Math.round(requiredDailyWithCompound));
+              const formattedRequiredDaily = formatNumber(
+                Math.round(requiredDailyWithCompound),
+              );
               const pureInterestLost =
                 compoundLossOver30Days - dailyBurnRate * daysToRecover;
-              const formattedInterestLost = formatNumber(Math.round(pureInterestLost));
+              const formattedInterestLost = formatNumber(
+                Math.round(pureInterestLost),
+              );
               const totalMonthlyCut = Math.round(dailyBurnRate * 3).toString();
 
               const strategies = AI_STRATEGIES.map((s) =>
-                s.replace("{AMOUNT}", formatNumber(totalMonthlyCut))
+                s.replace("{AMOUNT}", formatNumber(totalMonthlyCut)),
               );
-              const severityRatio = (dailyBurnRate * 30) / (Math.abs(netWorth) || 1);
+              const severityRatio =
+                (dailyBurnRate * 30) / (Math.abs(netWorth) || 1);
               let aiStrategyIndex = 0;
               if (severityRatio > SEVERITY_RATIO_MODERATE) aiStrategyIndex = 1;
               if (severityRatio > SEVERITY_RATIO_SEVERE) aiStrategyIndex = 2;
@@ -284,37 +294,128 @@ export default function DashboardScreen() {
   );
 }
 
-const makeStyles = (c: AppColorScheme) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: c.bg },
-  loadingContainer: { flex: 1, backgroundColor: c.bg, justifyContent: "center", alignItems: "center" },
-  loadingText: { color: c.textMuted, fontSize: 16 },
-  background: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0 },
-  safeArea: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
-  header: { marginTop: 10, marginBottom: 30, alignItems: "center" },
-  dateText: { color: c.textMuted, fontSize: 12, fontWeight: "500", letterSpacing: 0.6 },
-  title: { color: c.text, fontSize: 24, fontWeight: "800", marginTop: 6 },
-  subtitle: { color: c.textMuted, fontSize: 13, marginTop: 4, letterSpacing: 0.4 },
-  balanceContainer: { flexDirection: "row", alignItems: "baseline", justifyContent: "center", marginBottom: 24 },
-  currencySymbol: { color: c.textSecondary, fontSize: 22, fontWeight: "300", marginRight: 2, marginBottom: 6 },
-  balanceInteger: { color: c.text, fontSize: Math.min(width * 0.13, 52), fontWeight: "800", letterSpacing: -1.5 },
-  balanceDecimal: { color: c.textMuted, fontSize: 22, fontWeight: "400" },
-  unitSelector: { flexDirection: "row", justifyContent: "center", marginBottom: 12, backgroundColor: c.card, alignSelf: "center", borderRadius: 12, padding: 4, borderWidth: 1, borderColor: c.cardBorder },
-  unitBtn: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 8 },
-  unitBtnActive: { backgroundColor: c.accentBg, borderWidth: 1, borderColor: c.accentBorder },
-  unitBtnText: { color: c.textMuted, fontSize: 14, fontWeight: "600" },
-  unitBtnTextActive: { color: c.accent },
-  burnRateBadge: { flexDirection: "row", alignItems: "center", alignSelf: "center", backgroundColor: c.dangerBg, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: c.dangerBorder, marginBottom: 30 },
-  pulseDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: c.danger, marginRight: 8 },
-  burnRateText: { color: c.danger, fontSize: 14, fontWeight: "600" },
-  statsCard: { backgroundColor: c.card, borderRadius: 24, padding: 20, borderWidth: 1, borderColor: c.cardBorder },
-  statRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  statLabel: { color: c.textSecondary, fontSize: 14, fontWeight: "500" },
-  statValue: { color: c.text, fontSize: 22, fontWeight: "700" },
-  statSubtext: { color: c.textMuted, fontSize: 12, marginTop: 6, lineHeight: 18 },
-  aiCard: { backgroundColor: c.purpleBg, borderRadius: 24, padding: 20, borderWidth: 1, borderColor: c.purpleBorder, marginTop: 12 },
-  aiCardLabel: { color: c.purple, fontSize: 14, fontWeight: "600" },
-  planText: { color: c.textSecondary, fontSize: 13, marginTop: 8, lineHeight: 22 },
-  planHighlight: { color: c.text, fontWeight: "700" },
-});
-展开
+const makeStyles = (c: AppColorScheme) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    loadingContainer: {
+      flex: 1,
+      backgroundColor: c.bg,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loadingText: { color: c.textMuted, fontSize: 16 },
+    background: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0 },
+    safeArea: { flex: 1 },
+    scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
+    header: { marginTop: 10, marginBottom: 30, alignItems: "center" },
+    dateText: {
+      color: c.textMuted,
+      fontSize: 12,
+      fontWeight: "500",
+      letterSpacing: 0.6,
+    },
+    title: { color: c.text, fontSize: 24, fontWeight: "800", marginTop: 6 },
+    subtitle: {
+      color: c.textMuted,
+      fontSize: 13,
+      marginTop: 4,
+      letterSpacing: 0.4,
+    },
+    balanceContainer: {
+      flexDirection: "row",
+      alignItems: "baseline",
+      justifyContent: "center",
+      marginBottom: 24,
+    },
+    currencySymbol: {
+      color: c.textSecondary,
+      fontSize: 22,
+      fontWeight: "300",
+      marginRight: 2,
+      marginBottom: 6,
+    },
+    balanceInteger: {
+      color: c.text,
+      fontSize: Math.min(width * 0.13, 52),
+      fontWeight: "800",
+      letterSpacing: -1.5,
+    },
+    balanceDecimal: { color: c.textMuted, fontSize: 22, fontWeight: "400" },
+    unitSelector: {
+      flexDirection: "row",
+      justifyContent: "center",
+      marginBottom: 12,
+      backgroundColor: c.card,
+      alignSelf: "center",
+      borderRadius: 12,
+      padding: 4,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    unitBtn: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 8 },
+    unitBtnActive: {
+      backgroundColor: c.accentBg,
+      borderWidth: 1,
+      borderColor: c.accentBorder,
+    },
+    unitBtnText: { color: c.textMuted, fontSize: 14, fontWeight: "600" },
+    unitBtnTextActive: { color: c.accent },
+    burnRateBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      alignSelf: "center",
+      backgroundColor: c.dangerBg,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: c.dangerBorder,
+      marginBottom: 30,
+    },
+    pulseDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: c.danger,
+      marginRight: 8,
+    },
+    burnRateText: { color: c.danger, fontSize: 14, fontWeight: "600" },
+    statsCard: {
+      backgroundColor: c.card,
+      borderRadius: 24,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    statRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    statLabel: { color: c.textSecondary, fontSize: 14, fontWeight: "500" },
+    statValue: { color: c.text, fontSize: 22, fontWeight: "700" },
+    statSubtext: {
+      color: c.textMuted,
+      fontSize: 12,
+      marginTop: 6,
+      lineHeight: 18,
+    },
+    aiCard: {
+      backgroundColor: c.purpleBg,
+      borderRadius: 24,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: c.purpleBorder,
+      marginTop: 12,
+    },
+    aiCardLabel: { color: c.purple, fontSize: 14, fontWeight: "600" },
+    planText: {
+      color: c.textSecondary,
+      fontSize: 13,
+      marginTop: 8,
+      lineHeight: 22,
+    },
+    planHighlight: { color: c.text, fontWeight: "700" },
+  });
+展开;
