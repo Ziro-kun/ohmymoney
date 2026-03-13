@@ -42,7 +42,7 @@ export default function DashboardScreen() {
   const [selectedUnit, setSelectedUnit] = useState<TimeUnit>("second");
 
   const [lastRefValue, setLastRefValue] = useState(0);
-  const [lastRefTime, setLastRefTime] = useState(Date.now());
+  const [lastRefTime, setLastRefTime] = useState(0);
 
   const isLosingMoney = perSecondBurnRate > 0;
 
@@ -72,13 +72,20 @@ export default function DashboardScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadData().then(() => {
-        setLastRefValue(useFinanceStore.getState().netWorth);
-        setLastRefTime(Date.now());
-      });
+      loadData();
     }, [loadData]),
   );
 
+  // Sync base values whenever store data updates or screen is focused
+  useEffect(() => {
+    if (isInitialized) {
+      setLastRefValue(netWorth);
+      setLastRefTime(Date.now());
+      setLiveBalance(netWorth);
+    }
+  }, [isInitialized, netWorth, perSecondBurnRate]);
+
+  // Handle AppState foreground transition
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === "active" && isInitialized && lastRefTime > 0) {
@@ -90,17 +97,9 @@ export default function DashboardScreen() {
     return () => subscription.remove();
   }, [isInitialized, lastRefTime, lastRefValue, perSecondBurnRate]);
 
+  // Ticker interval
   useEffect(() => {
-    if (isInitialized) {
-      if (lastRefValue === 0) {
-        setLastRefValue(netWorth);
-        setLastRefTime(Date.now());
-        setLiveBalance(netWorth);
-      } else {
-        const elapsed = (Date.now() - lastRefTime) / 1000;
-        setLiveBalance(lastRefValue - elapsed * perSecondBurnRate);
-      }
-
+    if (isInitialized && lastRefTime > 0) {
       let tickInterval = 100;
       if (selectedUnit === "minute") tickInterval = 1000;
       else if (selectedUnit === "hour") tickInterval = 60000;
@@ -115,7 +114,6 @@ export default function DashboardScreen() {
     }
   }, [
     isInitialized,
-    netWorth,
     perSecondBurnRate,
     selectedUnit,
     lastRefTime,
