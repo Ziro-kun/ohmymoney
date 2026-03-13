@@ -4,6 +4,23 @@
 
 Ohmymoney는 단순한 가계부를 넘어, 사용자의 고정 지출을 기반으로 **초 단위로 깎여나가는 순자산(Burn Rate)** 을 시각화합니다. 돈을 쓰는 시점뿐만 아니라, 가만히 있어도 사라지는 기회비용과 유지비를 직관적으로 체감할 수 있도록 설계되었습니다.
 
+## 📸 스크린샷 (Screenshots)
+
+<p align="center">
+  <img src="./screenshot/01.png" width="19%">
+  <img src="./screenshot/02.png" width="19%">
+  <img src="./screenshot/03.png" width="19%">
+  <img src="./screenshot/04.png" width="19%">
+  <img src="./screenshot/05.png" width="19%">
+</p>
+<p align="center">
+  <img src="./screenshot/06.png" width="19%">
+  <img src="./screenshot/07.png" width="19%">
+  <img src="./screenshot/08.png" width="19%">
+  <img src="./screenshot/09.png" width="19%">
+  <img src="./screenshot/10.png" width="19%">
+</p>
+
 ---
 
 ## 🚀 주요 기능
