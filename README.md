@@ -1,85 +1,80 @@
-# Ohmymoney (오마이머니) 💸
+# 텅-장 시뮬레이터: Tung-sim Live (텅-심 라이브) 💸
 
-> **"숨만 쉬어도 돈이 나간다"** — 실시간으로 줄어드는 내 순자산을 보며 소비 습관을 교정하는 리얼타임 자산 트래커입니다.
+> **"지갑의 심박수를 느껴라"** — 실시간으로 흐르는 내 돈의 속도를 체감하고 스마트하게 자산을 관리하는 리얼타임 텅-장 추적기입니다.
 
-Ohmymoney는 단순한 가계부를 넘어, 사용자의 고정 지출을 기반으로 **초 단위로 깎여나가는 순자산(Burn Rate)** 을 시각화합니다. 돈을 쓰는 시점뿐만 아니라, 가만히 있어도 사라지는 기회비용과 유지비를 직관적으로 체감할 수 있도록 설계되었습니다.
+Tung-sim Live는 단순한 가계부를 넘어, 사용자의 순자산과 고정 지출을 결합하여 **초 단위로 변화하는 잔액(Real-time Ticker)** 을 시각화합니다. 가만히 있어도 사라지는 유지비와 기회비용을 직관적으로 보여줌으로써 보다 건강한 금융 감각을 일깨워줍니다.
 
 ## 📸 스크린샷 (Screenshots)
 
 <p align="center">
-  <img src="./screenshot/01.png" width="19%">
-  <img src="./screenshot/02.png" width="19%">
-  <img src="./screenshot/03.png" width="19%">
-  <img src="./screenshot/04.png" width="19%">
-  <img src="./screenshot/05.png" width="19%">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.35.06.png" width="18%">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.35.50.png" width="18%">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.39.24.png" width="18%">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.39.28.png" width="18%">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.39.32.png" width="18%">
 </p>
 <p align="center">
-  <img src="./screenshot/06.png" width="19%">
-  <img src="./screenshot/07.png" width="19%">
-  <img src="./screenshot/08.png" width="19%">
-  <img src="./screenshot/09.png" width="19%">
-  <img src="./screenshot/10.png" width="19%">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.39.39.png" width="18%">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.39.58.png" width="18%">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.40.00.png" width="18%">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.40.02.png" width="18%">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.40.04.png" width="18%">
+</p>
+<p align="center">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.40.09.png" width="18%">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.40.11.png" width="18%">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.40.13.png" width="18%">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.40.15.png" width="18%">
+  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.48.59.png" width="18%">
 </p>
 
 ---
 
-## 🚀 주요 기능
+## 🚀 주요 기능 (Core Features)
 
-- **실시간 자산 티커 (Real-time Ticker)**: 설정된 번 레이트(Burn Rate)에 따라 순자산이 실시간으로 줄어드는 모습을 초 단위까지 시각화합니다.
-- **번 레이트(Burn Rate) 분석**: 일/시/분/초 단위로 내 삶을 유지하는 데 드는 비용을 세밀하게 분석합니다.
-- **자산 및 부채 관리**: 현재 보유한 현금, 주식 등 자산과 대출, 할부 등 부채를 구분하여 관리합니다.
-- **고정 지출 설정**: 월 정기 구독, 관리비, 식비 등 반복되는 지출을 빈도별(일/주/월/년)로 등록할 수 있습니다.
-- **🤖 AI 흑자 전환 플랜**: 현재 자산 상황과 지출 규모를 분석하여, 30일 이내에 흑자로 전환하기 위한 기회비용 계산 및 행동 전략을 제안합니다.
-- **다크/라이트 모드**: 프리미엄한 사용자 경험을 위한 감각적인 테마 지원 및 애니메이션 효과.
+- **✨ 실시간 텅-심(心) 티커**: 설정된 번 레이트(Burn Rate)에 따라 순자산이 실시간으로 줄어드는(또는 늘어나는) 모습을 60fps 애니메이션으로 시각화합니다.
+- **↕️ 수직 스와이프 강조 모드**: 화면을 위아래로 스와이프하여 **하루 유지비(Burn Focus)** 와 **현재 잔액(Balance Focus)** 중 원하는 정보를 강조하여 볼 수 있습니다.
+- **📖 스마트 가계부 (Flow)**: 수입, 지출, 이체를 간편하게 기록하고, 특정 지출을 '고정 지출'로 설정하여 번 레이트에 즉시 반영할 수 있습니다.
+- **🏦 자산 및 부채 관리 (Stock)**: 보유한 자산과 부채를 통합 관리하며, 수정 및 삭제 시 실시간으로 전체 순자산에 연동됩니다.
+- **🤖 AI 흑자 전환 플랜**: 현재 자산 상황을 분석하여 30일 이내에 재무 건강을 회복하기 위한 맞춤형 전략과 기회비용 분석을 제공합니다.
+- **🛡️ 플랫폼 안정성**: Android 환경에서의 SQLite 초기화 오류 및 레이아웃 크래시를 완벽히 해결하여 모든 기기에서 매끄러운 경험을 제공합니다.
 
-## 🛠 기술 스택
+## 🛠 기술 스택 (Tech Stack)
 
 - **Framework**: [Expo](https://expo.dev/) (SDK 54) / [React Native](https://reactnative.dev/)
-- **Routing**: [Expo Router](https://docs.expo.dev/router/introduction/) (File-based)
-- **State Management**: [Zustand](https://github.com/pmndrs/zustand) (v5)
-- **Database**: [expo-sqlite](https://docs.expo.dev/versions/latest/sdk/sqlite/) (Local-first)
+- **State Management**: [Zustand](https://github.com/pmndrs/zustand)
+- **Database**: [expo-sqlite](https://docs.expo.dev/versions/latest/sdk/sqlite/) (Offline-First)
 - **Animation**: [React Native Reanimated](https://docs.expo.dev/versions/latest/sdk/reanimated/)
-- **Icons**: [Ionicons (@expo/vector-icons)](https://icons.expo.fyi/)
+- **Styling**: Vanilla React Native StyleSheet with Canvas-like optimization
 
-## 🏃 시작하기
+## 🏃 시작하기 (Getting Started)
 
 ### 1. 의존성 설치
+
 ```bash
 npm install
 ```
 
 ### 2. 개발 서버 실행
+
 ```bash
+npm run dev
+# 또는
 npx expo start
 ```
 
-### 3. 안드로이드 APK 빌드 (Release)
-로컬 환경에서 직접 APK를 추출하려면 아래 명령어를 사용하세요:
-```bash
-npx expo prebuild -p android --clean
-cd android && ./gradlew assembleRelease
-```
-*결과물 경로: `android/app/build/outputs/apk/release/app-release.apk`*
-
 ---
 
-## 📂 프로젝트 구조
+## 📂 프로젝트 구조 (Project Structure)
 
-- `app/`: 라우팅 및 화면 컴포넌트 (Dashboard, Settings)
-- `src/store/`: Zustand 기반 금융 상태 관리 및 계산 로직
-- `src/db/`: SQLite 테이블 초기화 및 CRUD 헬퍼
-- `constants/`: 테마 및 금융 계산 상수
-- `hooks/`: 테마 및 공통 훅
-
----
-
-## 🔮 향후 계획 (Roadmap)
-
-- **AI 기반 흑자 전환 모델 탑재**: 현재의 제안을 넘어, 실제 머신러닝/AI 모델을 기기에 탑재하여 사용자의 정밀한 소비 패턴을 분석하고 개인화된 자산 관리 플랜을 제공할 계획입니다.
-- **초개인형 종합 자산관리 플랫폼**: 기존 가계부 기능과 완벽하게 통합하여, 단순 지출 추척에서 그치지 않고 자산 증식 전략과 절세 기회까지 짚어주는 '나만의 금융 비서' 앱으로 집중 발전시킬 예정입니다.
+- `app/(tabs)/`: 메인 기능 화면 (Dashboard, Flow, Stock, Settings)
+- `src/store/`: Zustand 기반 실시간 계산 엔진 및 상태 관리
+- `src/db/`: SQLite 테이블 스키마 및 마이그레이션 로직
+- `constants/`: 금융 계산 상수 및 테마 토큰
 
 ---
 
 ## 📄 라이선스
 
-이 프로젝트는 개인 학습 및 자산 관리 목적으로 제작되었습니다.
+이 프로젝트는 개인 학습 및 자산 관리 인사이트 제공을 목적으로 제작되었습니다.
+展开

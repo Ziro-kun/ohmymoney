@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
-import { View } from 'react-native';
-import { useAppTheme } from '../../hooks/useAppTheme';
+import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
+import { View } from "react-native";
+import { useAppTheme } from "../../hooks/useAppTheme";
 
 export default function TabLayout() {
   const { colors } = useAppTheme();
@@ -23,7 +23,7 @@ export default function TabLayout() {
           },
           tabBarLabelStyle: {
             fontSize: 11,
-            fontWeight: '600',
+            fontWeight: "600",
             letterSpacing: 0.3,
           },
           tabBarActiveTintColor: colors.accent,
@@ -33,16 +33,34 @@ export default function TabLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: '대시보드',
+            title: "대시보드",
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="pie-chart" size={size} color={color} />
+              <Ionicons name="apps" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="flow"
+          options={{
+            title: "가계부",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="list" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="stock"
+          options={{
+            title: "자산관리",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="wallet" size={size} color={color} />
             ),
           }}
         />
         <Tabs.Screen
           name="settings"
           options={{
-            title: '설정',
+            title: "설정",
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="settings" size={size} color={color} />
             ),
@@ -52,3 +70,4 @@ export default function TabLayout() {
     </View>
   );
 }
+展开
