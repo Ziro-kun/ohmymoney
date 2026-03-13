@@ -49,10 +49,14 @@ export const initializeDB = async () => {
 
   // Migration: Add isFixed to transactions if it doesn't exist (Safe for Android)
   try {
-    const tableInfo = (await database.getAllAsync("PRAGMA table_info(transactions)")) as any[];
+    const tableInfo = (await database.getAllAsync(
+      "PRAGMA table_info(transactions)",
+    )) as any[];
     const hasIsFixed = tableInfo.some((col) => col.name === "isFixed");
     if (!hasIsFixed) {
-      await database.execAsync("ALTER TABLE transactions ADD COLUMN isFixed INTEGER DEFAULT 0;");
+      await database.execAsync(
+        "ALTER TABLE transactions ADD COLUMN isFixed INTEGER DEFAULT 0;",
+      );
     }
   } catch (err) {
     console.log("Migration skipped or failed:", err);
@@ -67,18 +71,32 @@ export const getAssets = async () => {
 
 export const addAsset = async (name: string, amount: number, type: string) => {
   const database = await getDB();
-  const statement = await database.prepareAsync("INSERT INTO assets (name, amount, type) VALUES ($name, $amount, $type)");
+  const statement = await database.prepareAsync(
+    "INSERT INTO assets (name, amount, type) VALUES ($name, $amount, $type)",
+  );
   try {
-    const result = await statement.executeAsync({ $name: name, $amount: amount, $type: type });
+    const result = await statement.executeAsync({
+      $name: name,
+      $amount: amount,
+      $type: type,
+    });
     return result.lastInsertRowId;
   } finally {
     await statement.finalizeAsync();
   }
 };
 
-export const updateAsset = async (id: number, name: string, amount: number, type: string) => {
+export const updateAsset = async (
+  id: number,
+  name: string,
+  amount: number,
+  type: string,
+) => {
   const database = await getDB();
-  await database.runAsync("UPDATE assets SET name = ?, amount = ?, type = ? WHERE id = ?", [name, amount, type, id]);
+  await database.runAsync(
+    "UPDATE assets SET name = ?, amount = ?, type = ? WHERE id = ?",
+    [name, amount, type, id],
+  );
 };
 
 export const removeAsset = async (id: number) => {
@@ -92,11 +110,21 @@ export const getExpenses = async () => {
   return await database.getAllAsync("SELECT * FROM expenses ORDER BY id DESC");
 };
 
-export const addExpense = async (name: string, amount: number, frequency: string) => {
+export const addExpense = async (
+  name: string,
+  amount: number,
+  frequency: string,
+) => {
   const database = await getDB();
-  const statement = await database.prepareAsync("INSERT INTO expenses (name, amount, frequency) VALUES ($name, $amount, $frequency)");
+  const statement = await database.prepareAsync(
+    "INSERT INTO expenses (name, amount, frequency) VALUES ($name, $amount, $frequency)",
+  );
   try {
-    const result = await statement.executeAsync({ $name: name, $amount: amount, $frequency: frequency });
+    const result = await statement.executeAsync({
+      $name: name,
+      $amount: amount,
+      $frequency: frequency,
+    });
     return result.lastInsertRowId;
   } finally {
     await statement.finalizeAsync();
@@ -111,14 +139,21 @@ export const removeExpense = async (id: number) => {
 // --- Transactions ---
 export const getTransactions = async () => {
   const database = await getDB();
-  const results = (await database.getAllAsync("SELECT * FROM transactions ORDER BY date DESC, id DESC")) as any[];
+  const results = (await database.getAllAsync(
+    "SELECT * FROM transactions ORDER BY date DESC, id DESC",
+  )) as any[];
   return results.map((tx) => ({ ...tx, isFixed: !!tx.isFixed }));
 };
 
-export const addTransaction = async (description: string, amount: number, type: string, isFixed: boolean = false) => {
+export const addTransaction = async (
+  description: string,
+  amount: number,
+  type: string,
+  isFixed: boolean = false,
+) => {
   const database = await getDB();
   const statement = await database.prepareAsync(
-    "INSERT INTO transactions (description, amount, type, date, isFixed) VALUES ($desc, $amt, $type, $date, $fixed)"
+    "INSERT INTO transactions (description, amount, type, date, isFixed) VALUES ($desc, $amt, $type, $date, $fixed)",
   );
   try {
     const result = await statement.executeAsync({
@@ -134,11 +169,17 @@ export const addTransaction = async (description: string, amount: number, type: 
   }
 };
 
-export const updateTransaction = async (id: number, description: string, amount: number, type: string, isFixed: boolean = false) => {
+export const updateTransaction = async (
+  id: number,
+  description: string,
+  amount: number,
+  type: string,
+  isFixed: boolean = false,
+) => {
   const database = await getDB();
   await database.runAsync(
     "UPDATE transactions SET description = ?, amount = ?, type = ?, isFixed = ? WHERE id = ?",
-    [description, amount, type, isFixed ? 1 : 0, id]
+    [description, amount, type, isFixed ? 1 : 0, id],
   );
 };
 
@@ -150,8 +191,10 @@ export const removeTransaction = async (id: number) => {
 // --- Dummy Data ---
 export const loadDummyData = async () => {
   const database = await getDB();
-  await database.execAsync("DELETE FROM assets; DELETE FROM expenses; DELETE FROM transactions;");
-  
+  await database.execAsync(
+    "DELETE FROM assets; DELETE FROM expenses; DELETE FROM transactions;",
+  );
+
   await addAsset("주거래 은행 (신한)", 25000000, "asset");
   await addAsset("주식 계좌 (토스)", 12500000, "asset");
   await addAsset("전세자금 대출", 50000000, "liability");
@@ -161,4 +204,3 @@ export const loadDummyData = async () => {
   await addTransaction("월급 입금", 3500000, "income", false);
   await addTransaction("넷플릭스 구독", 17000, "expense", true);
 };
-展开

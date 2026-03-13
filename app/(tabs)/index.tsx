@@ -170,7 +170,9 @@ export default function DashboardScreen() {
               })}
             </Text>
             <Text style={styles.title}>Tung-sim Live</Text>
-            <Text style={styles.subtitle}>지갑의 심박수를 느껴라</Text>
+            <Text style={styles.subtitle}>
+              당신의 지갑이 텅 비어가는 과정을 확인해보세요
+            </Text>
           </View>
 
           <View style={styles.balanceContainer}>
@@ -418,4 +420,3 @@ const makeStyles = (c: AppColorScheme) =>
     },
     planHighlight: { color: c.text, fontWeight: "700" },
   });
-展开;

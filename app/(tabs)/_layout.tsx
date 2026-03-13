@@ -70,4 +70,3 @@ export default function TabLayout() {
     </View>
   );
 }
-展开

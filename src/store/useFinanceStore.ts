@@ -1,16 +1,16 @@
 import { create } from "zustand";
 import {
-  initializeDB,
+  addAsset,
+  addTransaction,
   getAssets,
   getExpenses,
   getTransactions,
-  addAsset,
-  addTransaction,
-  updateAsset,
-  updateTransaction,
+  initializeDB,
+  loadDummyData,
   removeAsset,
   removeTransaction,
-  loadDummyData,
+  updateAsset,
+  updateTransaction,
 } from "../db/sqlite";
 
 export interface Asset {
@@ -50,11 +50,31 @@ interface FinanceState {
 
   // Methods
   loadData: () => Promise<void>;
-  addAsset: (name: string, amount: number, type: "asset" | "liability") => Promise<void>;
-  updateAsset: (id: number, name: string, amount: number, type: "asset" | "liability") => Promise<void>;
+  addAsset: (
+    name: string,
+    amount: number,
+    type: "asset" | "liability",
+  ) => Promise<void>;
+  updateAsset: (
+    id: number,
+    name: string,
+    amount: number,
+    type: "asset" | "liability",
+  ) => Promise<void>;
   deleteAsset: (id: number) => Promise<void>;
-  addTransaction: (description: string, amount: number, type: "income" | "expense", isFixed?: boolean) => Promise<void>;
-  updateTransaction: (id: number, description: string, amount: number, type: "income" | "expense", isFixed?: boolean) => Promise<void>;
+  addTransaction: (
+    description: string,
+    amount: number,
+    type: "income" | "expense",
+    isFixed?: boolean,
+  ) => Promise<void>;
+  updateTransaction: (
+    id: number,
+    description: string,
+    amount: number,
+    type: "income" | "expense",
+    isFixed?: boolean,
+  ) => Promise<void>;
   deleteTransaction: (id: number) => Promise<void>;
   applyDummyData: () => Promise<void>;
 }
@@ -62,14 +82,22 @@ interface FinanceState {
 import { DAYS_IN_MONTH, DAYS_IN_YEAR } from "../../constants/finance";
 
 // Helpers for calculations
-const calculateDailyBurn = (expenses: Expense[] = [], transactions: Transaction[] = []) => {
+const calculateDailyBurn = (
+  expenses: Expense[] = [],
+  transactions: Transaction[] = [],
+) => {
   const expenseBurn = expenses.reduce((total, exp) => {
     switch (exp.frequency) {
-      case "daily": return total + exp.amount;
-      case "weekly": return total + exp.amount / 7;
-      case "monthly": return total + exp.amount / DAYS_IN_MONTH;
-      case "yearly": return total + exp.amount / DAYS_IN_YEAR;
-      default: return total;
+      case "daily":
+        return total + exp.amount;
+      case "weekly":
+        return total + exp.amount / 7;
+      case "monthly":
+        return total + exp.amount / DAYS_IN_MONTH;
+      case "yearly":
+        return total + exp.amount / DAYS_IN_YEAR;
+      default:
+        return total;
     }
   }, 0);
 
@@ -99,7 +127,9 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     const transactionsData = (await getTransactions()) as Transaction[];
 
     const baseNetWorth = assetsData.reduce((total, asset) => {
-      return asset.type === "asset" ? total + asset.amount : total - asset.amount;
+      return asset.type === "asset"
+        ? total + asset.amount
+        : total - asset.amount;
     }, 0);
 
     // Sum up transactions (income - expense)
@@ -159,4 +189,3 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await get().loadData();
   },
 }));
-展开

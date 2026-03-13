@@ -6,27 +6,7 @@ Tung-sim Live는 단순한 가계부를 넘어, 사용자의 순자산과 고정
 
 ## 📸 스크린샷 (Screenshots)
 
-<p align="center">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.35.06.png" width="18%">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.35.50.png" width="18%">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.39.24.png" width="18%">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.39.28.png" width="18%">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.39.32.png" width="18%">
-</p>
-<p align="center">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.39.39.png" width="18%">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.39.58.png" width="18%">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.40.00.png" width="18%">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.40.02.png" width="18%">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.40.04.png" width="18%">
-</p>
-<p align="center">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.40.09.png" width="18%">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.40.11.png" width="18%">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.40.13.png" width="18%">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.40.15.png" width="18%">
-  <img src="./screenshot/Simulator%20Screenshot%20-%20iPhone%2017%20-%202026-03-13%20at%2023.48.59.png" width="18%">
-</p>
+*(최신 버전의 스크린샷이 곧 업데이트될 예정입니다.)*
 
 ---
 
