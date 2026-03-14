@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Modal,
   ScrollView,
@@ -20,6 +20,7 @@ interface DebtManageWizardModalProps {
 
 export function DebtManageWizardModal({ visible, onClose }: DebtManageWizardModalProps) {
   const { colors, isDark } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
   const { assets, repayLoan, refinanceLoan } = useFinanceStore();
 
   const [step, setStep] = useState(1);
@@ -115,7 +116,7 @@ export function DebtManageWizardModal({ visible, onClose }: DebtManageWizardModa
                         styles.assetBtn,
                         selectedLoanId === loan.id
                           ? { backgroundColor: colors.danger, borderColor: colors.danger }
-                          : { borderColor: colors.cardBorder, backgroundColor: colors.bgSecondary },
+                          : { backgroundColor: isDark ? "#1a2235" : "#f1f5f9" },
                       ]}
                       onPress={() => setSelectedLoanId(loan.id)}
                     >
@@ -131,7 +132,7 @@ export function DebtManageWizardModal({ visible, onClose }: DebtManageWizardModa
                       styles.modeBtn,
                       mode === 'repay'
                         ? { borderColor: colors.accent, backgroundColor: colors.accentBg }
-                        : { borderColor: colors.cardBorder },
+                        : { backgroundColor: isDark ? "#1a2235" : "#f1f5f9" },
                     ]}
                     onPress={() => setMode('repay')}
                   >
@@ -144,7 +145,7 @@ export function DebtManageWizardModal({ visible, onClose }: DebtManageWizardModa
                       styles.modeBtn,
                       mode === 'refinance'
                         ? { borderColor: colors.accent, backgroundColor: colors.accentBg }
-                        : { borderColor: colors.cardBorder },
+                        : { backgroundColor: isDark ? "#1a2235" : "#f1f5f9" },
                     ]}
                     onPress={() => setMode('refinance')}
                   >
@@ -278,7 +279,7 @@ export function DebtManageWizardModal({ visible, onClose }: DebtManageWizardModa
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modalContent: { 
     borderTopLeftRadius: 32, 

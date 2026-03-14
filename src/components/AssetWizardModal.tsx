@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Modal,
   ScrollView,
@@ -21,6 +21,7 @@ interface AssetWizardModalProps {
 
 export function AssetWizardModal({ visible, onClose }: AssetWizardModalProps) {
   const { colors, isDark } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
   const { assets, addComplexAsset } = useFinanceStore();
 
   const [step, setStep] = useState(1);
@@ -350,7 +351,7 @@ export function AssetWizardModal({ visible, onClose }: AssetWizardModalProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",

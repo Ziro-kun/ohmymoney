@@ -49,15 +49,15 @@
 - **원인 분석**: '이전' 버튼의 자리를 미리 확보하기 위해 비어있는 `View` 태그를 고정 너비로 넣어두어 레이아웃이 왜곡됨.
 - **해결책**: 플레이스홀더 `View`를 제거하고, '이전' 버튼이 실제로 렌더링될 때만 '다음' 버튼에 `marginLeft`를 부여하는 조건부 스타일 로직으로 변경하여 시각적 균형 확보.
 
-## 7. Android 실기기 하단 네비게이션 바 및 프레임 잔상 문제
+## 8. 마법사 모달 내 ReferenceError (isDark) 및 StockScreen export 오류
 
 - **증상**:
-  - 하단 안드로이드 시스템 네비게이션 바가 앱 UI를 가리는 현상 발생.
-  - 특정 기기에서 카드 테두리에 하얀색/검은색 프레임 잔상이 남는 시각적 오류 재발.
+  - 앱 실행 시 `ReferenceError: Property 'isDark' doesn't exist` 발생.
+  - 자산 관리(Stock) 탭 진입 시 `Route "./(tabs)/stock.tsx" is missing the required default export` 경고 발생.
 - **원인 분석**:
-  - `SafeAreaInsets`가 특정 안드로이드 테마에서 완벽하게 적용되지 않아 스크롤 하단부가 잘림.
-  - `borderWidth`와 `elevation`이 결합될 때 안드로이드 렌더링 엔진의 한계로 인해 시각적 아티팩트 발생.
+  - 스타일시트(`StyleSheet.create`)를 컴포넌트 외부에 선언하면서, 컴포넌트 내부 변수인 `isDark`를 직접 참조하여 런타임 에러 발생.
+  - `stock.tsx`에서 `useMemo`를 사용했으나 해당 모듈을 `react`로부터 `import`하지 않아 코드 실행이 중단됨.
 - **해결책**:
-  - `paddingBottom` 값을 `60` 이상으로 넉넉하게 설정하여 시스템 바와의 충분한 거리를 확보.
-  - 모든 메인 화면과 마법사 모달의 `borderWidth`를 전면 제거(`0`)하고, 배경을 가득 채우는 **'솔리드(Filled)' 디자인**으로 통일하여 렌더링 오류를 원천 차단.
+  - 모든 마법사 모달의 스타일을 `makeStyles` 함수 구조로 변경하고, `useMemo`를 통해 테마 상태(`isDark`)를 주입받도록 수정.
+  - `stock.tsx` 상단에 `useMemo` 임포트를 추가하여 정상적인 컴포넌트 렌더링 및 익스포트 보장.
 

@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Modal,
   ScrollView,
@@ -20,6 +20,7 @@ interface LoanWizardModalProps {
 
 export function LoanWizardModal({ visible, onClose }: LoanWizardModalProps) {
   const { colors, isDark } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
   const { assets, addLoan } = useFinanceStore();
 
   const [step, setStep] = useState(1);
@@ -142,7 +143,7 @@ export function LoanWizardModal({ visible, onClose }: LoanWizardModalProps) {
                       { flex: 1 },
                       payoutType === "account"
                         ? { backgroundColor: colors.accentBg, borderColor: colors.accent }
-                        : { borderColor: colors.cardBorder, backgroundColor: colors.bgSecondary },
+                        : { backgroundColor: isDark ? "#1a2235" : "#f1f5f9" },
                     ]}
                     onPress={() => setPayoutType("account")}
                   >
@@ -155,7 +156,7 @@ export function LoanWizardModal({ visible, onClose }: LoanWizardModalProps) {
                       { flex: 1 },
                       payoutType === "direct"
                         ? { backgroundColor: colors.accentBg, borderColor: colors.accent }
-                        : { borderColor: colors.cardBorder, backgroundColor: colors.bgSecondary },
+                        : { backgroundColor: isDark ? "#1a2235" : "#f1f5f9" },
                     ]}
                     onPress={() => setPayoutType("direct")}
                   >
@@ -239,7 +240,7 @@ export function LoanWizardModal({ visible, onClose }: LoanWizardModalProps) {
                 <AppText style={[styles.sectionTitle, { color: colors.text }]}>4. 최종 확인</AppText>
                 <AppText style={[styles.desc, { color: colors.textMuted, marginBottom: 20 }]}>대출 실행 시 다음 항목들이 자동으로 처리됩니다.</AppText>
 
-                <View style={[styles.summaryBox, { backgroundColor: isDark ? colors.bgSecondary : "#f8f9fb", borderColor: colors.cardBorder, padding: 20, borderRadius: 20, borderWidth: 1 }]}>
+                <View style={[styles.summaryBox, { backgroundColor: isDark ? colors.bgSecondary : "#f8f9fb", borderColor: colors.cardBorder, padding: 20, borderRadius: 20, borderWidth: 0 }]}>
                   {payoutType === "account" ? (
                     <>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -312,7 +313,7 @@ export function LoanWizardModal({ visible, onClose }: LoanWizardModalProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modalContent: { 
     borderTopLeftRadius: 32, 
