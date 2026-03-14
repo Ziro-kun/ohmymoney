@@ -324,28 +324,25 @@ export function AssetWizardModal({ visible, onClose }: AssetWizardModalProps) {
           </ScrollView>
 
           <View style={styles.actionRow}>
-            {step > 1 ? (
+            {step > 1 && (
               <TouchableOpacity style={styles.navBtn} onPress={handlePrev}>
                 <AppText style={{ color: colors.textSecondary, fontWeight: "600" }}>이전</AppText>
               </TouchableOpacity>
-            ) : <View style={{ width: 60 }} />}
-            
-            {step < 5 ? (
-              <TouchableOpacity 
-                style={[styles.nextBtn, { backgroundColor: colors.text }]} 
-                onPress={handleNext}
-                disabled={step === 1 && (!assetName || parseNum(totalValue) <= 0)}
-              >
-                <AppText style={{ color: colors.bg, fontWeight: "700" }}>다음</AppText>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity 
-                style={[styles.nextBtn, { backgroundColor: colors.accent }]} 
-                onPress={handleSubmit}
-              >
-                <AppText style={{ color: "#FFF", fontWeight: "800" }}>완료 및 등록</AppText>
-              </TouchableOpacity>
             )}
+            
+            <TouchableOpacity 
+              style={[
+                styles.nextBtn, 
+                { backgroundColor: step < 5 ? colors.text : colors.accent },
+                step > 1 && { marginLeft: 20 }
+              ]} 
+              onPress={step < 5 ? handleNext : handleSubmit}
+              disabled={step === 1 && (!assetName || parseNum(totalValue) <= 0)}
+            >
+              <AppText style={{ color: step < 5 ? colors.bg : "#FFF", fontWeight: "800" }}>
+                {step < 5 ? "다음" : "완료 및 등록"}
+              </AppText>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -474,7 +471,6 @@ const styles = StyleSheet.create({
   },
   nextBtn: {
     flex: 1,
-    marginLeft: 20,
     paddingVertical: 18,
     borderRadius: 16,
     alignItems: "center",

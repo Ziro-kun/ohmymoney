@@ -286,28 +286,25 @@ export function LoanWizardModal({ visible, onClose }: LoanWizardModalProps) {
           </ScrollView>
 
           <View style={styles.actionRow}>
-            {step > 1 ? (
+            {step > 1 && (
               <TouchableOpacity style={styles.navBtn} onPress={handlePrev}>
                 <AppText style={{ color: colors.textSecondary, fontWeight: "600" }}>이전</AppText>
               </TouchableOpacity>
-            ) : <View style={{ width: 60 }} />}
-            
-            {step < 4 ? (
-              <TouchableOpacity 
-                style={[styles.nextBtn, { backgroundColor: colors.text }]} 
-                onPress={handleNext}
-                disabled={step === 1 && (!loanName || parseNum(loanAmount) <= 0)}
-              >
-                <AppText style={{ color: colors.bg, fontWeight: "700" }}>다음</AppText>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity 
-                style={[styles.nextBtn, { backgroundColor: colors.accent }]} 
-                onPress={handleSubmit}
-              >
-                <AppText style={{ color: "#FFF", fontWeight: "800" }}>대출 등록 완료</AppText>
-              </TouchableOpacity>
             )}
+            
+            <TouchableOpacity 
+              style={[
+                styles.nextBtn, 
+                { backgroundColor: step < 4 ? colors.text : colors.accent },
+                step > 1 && { marginLeft: 20 }
+              ]} 
+              onPress={step < 4 ? handleNext : handleSubmit}
+              disabled={step === 1 && (!loanName || parseNum(loanAmount) <= 0)}
+            >
+              <AppText style={{ color: step < 4 ? colors.bg : "#FFF", fontWeight: "800" }}>
+                {step < 4 ? "다음" : "대출 등록 완료"}
+              </AppText>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -331,5 +328,5 @@ const styles = StyleSheet.create({
   assetBtn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 14, borderWidth: 1, marginRight: 10, minWidth: 80, alignItems: "center" },
   actionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 20 },
   navBtn: { padding: 16 },
-  nextBtn: { flex: 1, marginLeft: 20, paddingVertical: 18, borderRadius: 16, alignItems: "center" },
+  nextBtn: { flex: 1, paddingVertical: 18, borderRadius: 16, alignItems: "center" },
 });

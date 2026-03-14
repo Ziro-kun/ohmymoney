@@ -252,28 +252,25 @@ export function DebtManageWizardModal({ visible, onClose }: DebtManageWizardModa
           </ScrollView>
 
           <View style={styles.actionRow}>
-            {step > 1 ? (
+            {step > 1 && (
               <TouchableOpacity style={styles.navBtn} onPress={() => setStep(step - 1)}>
                 <AppText style={{ color: colors.textSecondary, fontWeight: "600" }}>이전</AppText>
               </TouchableOpacity>
-            ) : <View style={{ width: 60 }} />}
-            
-            {step < 3 ? (
-              <TouchableOpacity 
-                style={[styles.nextBtn, { backgroundColor: colors.text }]} 
-                onPress={() => mode && setStep(step + 1)}
-                disabled={!mode}
-              >
-                <AppText style={{ color: colors.bg, fontWeight: "700" }}>다음</AppText>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity 
-                style={[styles.nextBtn, { backgroundColor: colors.accent }]} 
-                onPress={handleSubmit}
-              >
-                <AppText style={{ color: "#FFF", fontWeight: "800" }}>완료</AppText>
-              </TouchableOpacity>
             )}
+            
+            <TouchableOpacity 
+              style={[
+                styles.nextBtn, 
+                { backgroundColor: step < 3 ? colors.text : colors.accent },
+                step > 1 && { marginLeft: 20 }
+              ]} 
+              onPress={step < 3 ? () => mode && setStep(step + 1) : handleSubmit}
+              disabled={!mode}
+            >
+              <AppText style={{ color: step < 3 ? colors.bg : "#FFF", fontWeight: "800" }}>
+                {step < 3 ? "다음" : "완료"}
+              </AppText>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -301,5 +298,5 @@ const styles = StyleSheet.create({
   summaryBox: { padding: 20, borderRadius: 20, borderWidth: 1 },
   actionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 20 },
   navBtn: { padding: 16 },
-  nextBtn: { flex: 1, marginLeft: 20, paddingVertical: 18, borderRadius: 16, alignItems: "center" },
+  nextBtn: { flex: 1, paddingVertical: 18, borderRadius: 16, alignItems: "center" },
 });
