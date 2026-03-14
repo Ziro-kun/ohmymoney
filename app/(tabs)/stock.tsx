@@ -14,6 +14,9 @@ import { useAppTheme } from "../../hooks/useAppTheme";
 import { useFinanceStore } from "../../src/store/useFinanceStore";
 import { AppText } from "../../src/components/AppText";
 import { formatNumber } from "../../src/utils/format";
+import { AssetWizardModal } from "../../src/components/AssetWizardModal";
+import { LoanWizardModal } from "../../src/components/LoanWizardModal";
+import { DebtManageWizardModal } from "../../src/components/DebtManageWizardModal";
 
 export default function StockScreen() {
   const { colors, isDark } = useAppTheme();
@@ -21,6 +24,9 @@ export default function StockScreen() {
     useFinanceStore();
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [wizardVisible, setWizardVisible] = useState(false);
+  const [loanWizardVisible, setLoanWizardVisible] = useState(false);
+  const [debtManageVisible, setDebtManageVisible] = useState(false);
   const [editingAsset, setEditingAsset] = useState<any>(null);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -38,6 +44,18 @@ export default function StockScreen() {
     setAmount("");
     setType("asset");
     setModalVisible(true);
+  };
+
+  const openWizardModal = () => {
+    setWizardVisible(true);
+  };
+
+  const openLoanWizardModal = () => {
+    setLoanWizardVisible(true);
+  };
+
+  const openDebtManageModal = () => {
+    setDebtManageVisible(true);
   };
 
   const openEditModal = (asset: any) => {
@@ -64,13 +82,36 @@ export default function StockScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={styles.header}>
         <AppText style={[styles.title, { color: colors.text }]}>
-          자산관리 (Stock)
+          자산관리
         </AppText>
         <TouchableOpacity
           style={[styles.addButton, { backgroundColor: colors.accent }]}
           onPress={openAddModal}
         >
           <Ionicons name="add" size={24} color="#FFF" />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.wizardActionsRow}>
+        <TouchableOpacity
+          style={[styles.wizardBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.cardBorder }]}
+          onPress={openDebtManageModal}
+        >
+          <Ionicons name="cash-outline" size={15} color={colors.textSecondary} />
+          <AppText style={[styles.wizardBtnText, { color: colors.textSecondary }]}>부채관리</AppText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.wizardBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.cardBorder }]}
+          onPress={openLoanWizardModal}
+        >
+          <Ionicons name="card-outline" size={15} color={colors.textSecondary} />
+          <AppText style={[styles.wizardBtnText, { color: colors.textSecondary }]}>대출등록</AppText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.wizardBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.cardBorder }]}
+          onPress={openWizardModal}
+        >
+          <Ionicons name="layers-outline" size={15} color={colors.textSecondary} />
+          <AppText style={[styles.wizardBtnText, { color: colors.textSecondary }]}>자산등록</AppText>
         </TouchableOpacity>
       </View>
 
@@ -134,8 +175,8 @@ export default function StockScreen() {
           <View
             style={[
               styles.modalContent,
-              { 
-                backgroundColor: isDark ? "#1a2235" : colors.card, 
+              {
+                backgroundColor: isDark ? "#0d1a30" : "#ffffff",
                 borderColor: colors.cardBorder,
                 shadowColor: "#000",
                 shadowOffset: { width: 0, height: 10 },
@@ -153,14 +194,16 @@ export default function StockScreen() {
               <TouchableOpacity
                 style={[
                   styles.typeBtn,
-                  type === "asset" && { backgroundColor: colors.accent },
+                  type === "asset"
+                    ? { backgroundColor: colors.accent, borderColor: colors.accent }
+                    : { borderColor: colors.cardBorder },
                 ]}
                 onPress={() => setType("asset")}
               >
                 <AppText
                   style={[
                     styles.typeBtnText,
-                    type === "asset" && { color: "#FFF" },
+                    { color: type === "asset" ? "#FFF" : colors.textMuted },
                   ]}
                 >
                   자산
@@ -169,14 +212,16 @@ export default function StockScreen() {
               <TouchableOpacity
                 style={[
                   styles.typeBtn,
-                  type === "liability" && { backgroundColor: colors.danger },
+                  type === "liability"
+                    ? { backgroundColor: colors.danger, borderColor: colors.danger }
+                    : { borderColor: colors.cardBorder },
                 ]}
                 onPress={() => setType("liability")}
               >
                 <AppText
                   style={[
                     styles.typeBtnText,
-                    type === "liability" && { color: "#FFF" },
+                    { color: type === "liability" ? "#FFF" : colors.textMuted },
                   ]}
                 >
                   부채
@@ -247,6 +292,21 @@ export default function StockScreen() {
           </View>
         </View>
       </Modal>
+      
+      <AssetWizardModal 
+        visible={wizardVisible} 
+        onClose={() => setWizardVisible(false)} 
+      />
+
+      <LoanWizardModal
+        visible={loanWizardVisible}
+        onClose={() => setLoanWizardVisible(false)}
+      />
+
+      <DebtManageWizardModal
+        visible={debtManageVisible}
+        onClose={() => setDebtManageVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -309,6 +369,26 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: -0.5,
   },
+  wizardActionsRow: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  wizardBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingVertical: 9,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  wizardBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
   typeSelector: { flexDirection: "row", marginBottom: 20, gap: 12 },
   typeBtn: {
     flex: 1,
@@ -317,6 +397,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "transparent",
     borderWidth: 1.5,
+    borderColor: "transparent",
   },
   typeBtnText: { fontWeight: "700", fontSize: 15 },
   input: {

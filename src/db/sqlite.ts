@@ -20,15 +20,27 @@ export const initializeDB = async () => {
 
     try {
       // 1. Base assets table
-      await database.execAsync(`
-        CREATE TABLE IF NOT EXISTS assets (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          amount REAL NOT NULL,
-          type TEXT NOT NULL,
-          createdAt TEXT DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
+      const assetTableInfo = (await database.getAllAsync("PRAGMA table_info(assets)")) as any[];
+      if (assetTableInfo.length > 0) {
+        const hasCategory = assetTableInfo.some((col) => col.name === "assetCategory");
+        if (!hasCategory) {
+          console.log("Migrating assets table to support assetCategory and depreciationRate...");
+          await database.execAsync("ALTER TABLE assets ADD COLUMN assetCategory TEXT;");
+          await database.execAsync("ALTER TABLE assets ADD COLUMN depreciationRate REAL;");
+        }
+      } else {
+        await database.execAsync(`
+          CREATE TABLE IF NOT EXISTS assets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            amount REAL NOT NULL,
+            type TEXT NOT NULL,
+            assetCategory TEXT,
+            depreciationRate REAL,
+            createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+      }
 
       // 2. Recurring expenses table
       await database.execAsync(`
@@ -70,9 +82,15 @@ export const initializeDB = async () => {
           `);
 
           try {
+            // Check if 'name' exists in old table to decide what to copy to 'description'
+            const oldTableInfo = (await database.getAllAsync(`PRAGMA table_info(transactions_old)`)) as any[];
+            const hasOldName = oldTableInfo.some((col) => col.name === "name");
+            
+            const descCol = hasOldName ? "name" : "description";
+            
             await database.execAsync(`
               INSERT INTO transactions (id, description, amount, type, date, category, isFixed)
-              SELECT id, description, amount, type, date, category, isFixed
+              SELECT id, ${descCol}, amount, type, date, category, isFixed
               FROM transactions_old;
             `);
           } catch (e) {
@@ -111,16 +129,18 @@ export const getAssets = async () => {
   return await database.getAllAsync("SELECT * FROM assets ORDER BY id DESC");
 };
 
-export const addAsset = async (name: string, amount: number, type: string) => {
+export const addAsset = async (name: string, amount: number, type: string, assetCategory?: string, depreciationRate?: number) => {
   const database = await getDB();
   const statement = await database.prepareAsync(
-    "INSERT INTO assets (name, amount, type) VALUES ($name, $amount, $type)",
+    "INSERT INTO assets (name, amount, type, assetCategory, depreciationRate) VALUES ($name, $amount, $type, $assetCategory, $depreciationRate)",
   );
   try {
     const result = await statement.executeAsync({
       $name: name,
       $amount: amount,
       $type: type,
+      $assetCategory: assetCategory || null,
+      $depreciationRate: depreciationRate || null,
     });
     return result.lastInsertRowId;
   } finally {
@@ -133,11 +153,13 @@ export const updateAsset = async (
   name: string,
   amount: number,
   type: string,
+  assetCategory?: string,
+  depreciationRate?: number,
 ) => {
   const database = await getDB();
   await database.runAsync(
-    "UPDATE assets SET name = ?, amount = ?, type = ? WHERE id = ?",
-    [name, amount, type, id],
+    "UPDATE assets SET name = ?, amount = ?, type = ?, assetCategory = ?, depreciationRate = ? WHERE id = ?",
+    [name, amount, type, assetCategory || null, depreciationRate || null, id],
   );
 };
 

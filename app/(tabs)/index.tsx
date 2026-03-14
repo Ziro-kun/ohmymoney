@@ -64,11 +64,12 @@ export default function DashboardScreen() {
   const isLosingMoney = perSecondBurnRate > 0;
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pulseScale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    const animation = Animated.loop(
+    const opacityAnim = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 0.15,
+          toValue: 0.2,
           duration: 700,
           useNativeDriver: true,
         }),
@@ -79,12 +80,33 @@ export default function DashboardScreen() {
         }),
       ]),
     );
+    const scaleAnim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseScale, {
+          toValue: 1.4,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseScale, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
     if (isLosingMoney) {
-      animation.start();
+      opacityAnim.start();
+      scaleAnim.start();
     } else {
-      animation.stop();
+      opacityAnim.stop();
+      scaleAnim.stop();
+      pulseAnim.setValue(1);
+      pulseScale.setValue(1);
     }
-    return () => animation.stop();
+    return () => {
+      opacityAnim.stop();
+      scaleAnim.stop();
+    };
   }, [isLosingMoney]);
 
   useFocusEffect(
@@ -150,13 +172,23 @@ export default function DashboardScreen() {
   const balanceStyle = useAnimatedStyle(() => {
     const opacity = interpolate(focusMode.value, [0, 1], [1, 0.3]);
     const scale = interpolate(focusMode.value, [0, 1], [1, 0.85]);
-    return { opacity, transform: [{ scale }] };
+    const translateY = interpolate(focusMode.value, [0, 1], [0, 120]);
+    return {
+      opacity,
+      transform: [{ scale }, { translateY }],
+      zIndex: focusMode.value === 0 ? 10 : 1,
+    };
   });
 
   const burnStyle = useAnimatedStyle(() => {
     const opacity = interpolate(focusMode.value, [0, 1], [0.3, 1]);
     const scale = interpolate(focusMode.value, [0, 1], [0.85, 1.1]);
-    return { opacity, transform: [{ scale }] };
+    const translateY = interpolate(focusMode.value, [0, 1], [0, -120]);
+    return {
+      opacity,
+      transform: [{ scale }, { translateY }],
+      zIndex: focusMode.value === 1 ? 10 : 1,
+    };
   });
 
   if (!isInitialized) {
@@ -210,18 +242,19 @@ export default function DashboardScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <AppText style={styles.dateAppText}>
-              {new Date().toLocaleDateString("ko-KR", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </AppText>
-            <AppText style={styles.title}>텅-장 시뮬레이터</AppText>
-            <AppText style={styles.subTitle}>Tung-sim Live</AppText>
-            <AppText style={styles.slogan}>
-              "당신의 지갑이 비어가는 과정을 실시간으로 지켜보세요"
+            <View style={styles.headerTopRow}>
+              <AppText style={styles.title}>텅심 Live</AppText>
+              <AppText style={styles.dateAppText}>
+                {new Date().toLocaleDateString("ko-KR", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                  weekday: "short",
+                })}
+              </AppText>
+            </View>
+            <AppText style={styles.subTitle}>
+              당신의 지갑이 비어가는 과정을 실시간으로 지켜보세요
             </AppText>
           </View>
           <View style={styles.unitSelectorContainer}>
@@ -255,104 +288,136 @@ export default function DashboardScreen() {
 
           <GestureDetector gesture={panGesture}>
             <AnimatedRE.View style={styles.cardWrapper}>
-              {/* Balance Emphasis Mode */}
-              <AnimatedRE.View style={[styles.mainEmphasis, balanceStyle]}>
-                <AppText
+              <View style={{ height: 260, justifyContent: "center" }}>
+                {/* Balance Emphasis Mode */}
+                <AnimatedRE.View
                   style={[
-                    styles.emphasisLabel,
-                    { color: colors.textSecondary },
+                    styles.mainEmphasis,
+                    { position: "absolute", top: 15, left: 0, right: 0 },
+                    balanceStyle,
                   ]}
                 >
-                  현재 나의 순자산
-                </AppText>
-                <View style={styles.balanceSection}>
-                  {isNegative && (
+                  <AppText
+                    style={[
+                      styles.emphasisLabel,
+                      { color: colors.textSecondary, marginBottom: 6 },
+                    ]}
+                  >
+                    현재 나의 순자산
+                  </AppText>
+                  <View style={styles.balanceSection}>
+                    {isNegative && (
+                      <AppText
+                        style={[
+                          styles.negativeSign,
+                          { color: isDark ? colors.accent : colors.text },
+                        ]}
+                      >
+                        -
+                      </AppText>
+                    )}
                     <AppText
                       style={[
-                        styles.negativeSign,
+                        styles.currencySymbol,
+                        {
+                          color: isDark ? colors.accent : colors.textSecondary,
+                        },
+                      ]}
+                    >
+                      ₩
+                    </AppText>
+                    <AppText
+                      style={[
+                        styles.balanceInteger,
                         { color: isDark ? colors.accent : colors.text },
                       ]}
                     >
-                      -
+                      {integerPart}
                     </AppText>
-                  )}
-                  <AppText
-                    style={[
-                      styles.currencySymbol,
-                      {
-                        color: isDark ? colors.accent : colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    ₩
-                  </AppText>
-                  <AppText
-                    style={[
-                      styles.balanceInteger,
-                      { color: isDark ? colors.accent : colors.text },
-                    ]}
-                  >
-                    {integerPart}
-                  </AppText>
-                  <AppText
-                    style={[
-                      styles.balanceDecimal,
-                      { color: isDark ? colors.accent : colors.textMuted },
-                      { opacity: 0.8 },
-                    ]}
-                  >
-                    .{decimalPart}
-                  </AppText>
-                </View>
-              </AnimatedRE.View>
+                    <AppText
+                      style={[
+                        styles.balanceDecimal,
+                        { color: isDark ? colors.accent : colors.textMuted },
+                        { opacity: 0.8 },
+                      ]}
+                    >
+                      .{decimalPart}
+                    </AppText>
+                  </View>
+                </AnimatedRE.View>
 
-              {/* Burn Rate Emphasis Mode */}
-              <AnimatedRE.View style={[styles.mainEmphasis, burnStyle]}>
-                <AppText
-                  style={[styles.emphasisLabel, { color: colors.danger }]}
-                >
-                  실시간 고정 지출 (Burn Rate)
-                </AppText>
-                <View style={styles.balanceSection}>
-                  <AppText
-                    style={[styles.negativeSign, { color: colors.danger }]}
-                  >
-                    -
-                  </AppText>
-                  <AppText
-                    style={[
-                      styles.currencySymbol,
-                      { color: colors.danger, opacity: 0.8 },
-                    ]}
-                  >
-                    ₩
-                  </AppText>
-                  <AppText
-                    style={[styles.balanceInteger, { color: colors.danger }]}
-                  >
-                    {rateInteger}
-                  </AppText>
-                  <AppText
-                    style={[
-                      styles.balanceDecimal,
-                      { color: colors.danger, opacity: 0.6 },
-                    ]}
-                  >
-                    .{rateDecimal}
-                  </AppText>
-                </View>
-                <AppText
+                {/* Burn Rate Emphasis Mode */}
+                <AnimatedRE.View
                   style={[
-                    styles.emphasisUnitLabel,
-                    { color: colors.textMuted },
+                    styles.mainEmphasis,
+                    { position: "absolute", top: 145, left: 0, right: 0 },
+                    burnStyle,
                   ]}
                 >
-                  ({label} 기준)
-                </AppText>
-              </AnimatedRE.View>
-
+                  <View style={styles.burnLabelRow}>
+                    {isLosingMoney && (
+                      <Animated.View
+                        style={[
+                          styles.pulseDot,
+                          {
+                            backgroundColor: colors.danger,
+                            opacity: pulseAnim,
+                            transform: [{ scale: pulseScale }],
+                          },
+                        ]}
+                      />
+                    )}
+                    <AppText
+                      style={[styles.emphasisLabel, { color: colors.danger }]}
+                    >
+                      실시간 고정 지출 (Burn Rate)
+                    </AppText>
+                  </View>
+                  <View style={styles.balanceSection}>
+                    <AppText
+                      style={[styles.negativeSign, { color: colors.danger }]}
+                    >
+                      -
+                    </AppText>
+                    <AppText
+                      style={[
+                        styles.currencySymbol,
+                        { color: colors.danger, opacity: 0.8 },
+                      ]}
+                    >
+                      ₩
+                    </AppText>
+                    <AppText
+                      style={[styles.balanceInteger, { color: colors.danger }]}
+                    >
+                      {rateInteger}
+                    </AppText>
+                    <AppText
+                      style={[
+                        styles.balanceDecimal,
+                        { color: colors.danger, opacity: 0.6 },
+                      ]}
+                    >
+                      .{rateDecimal}
+                    </AppText>
+                    <AppText
+                      style={[
+                        styles.emphasisUnitLabel,
+                        {
+                          color: colors.textMuted,
+                          marginLeft: 8,
+                          marginTop: 0,
+                        },
+                      ]}
+                    >
+                      ({label} 기준)
+                    </AppText>
+                  </View>
+                </AnimatedRE.View>
+              </View>
+              <View style={styles.cardDivider} />
               <AppText style={[styles.swipeHint, { color: colors.textMuted }]}>
-                위아래로 밀어 강조 대상을 전환해보세요 ↕️
+                ↕ 위아래로 밀면서 강조 대상을 전환하세요
               </AppText>
             </AnimatedRE.View>
           </GestureDetector>
@@ -362,11 +427,11 @@ export default function DashboardScreen() {
               <AppText style={styles.statLabel}>
                 하루 고정 유지비 (Burn Rate)
               </AppText>
-              <AppText style={styles.statValue}>
+              <AppText style={[styles.statValue, { color: colors.danger }]}>
                 ₩{formatNumber(dailyBurnRate)}
               </AppText>
             </View>
-            <AppText style={[styles.statSubtext, { textAlign: "center" }]}>
+            <AppText style={styles.statSubtext}>
               현재 내 자산을 유지하기 위해 필요한 일일 최소 금액입니다.
             </AppText>
           </View>
@@ -433,6 +498,7 @@ function AICard() {
 
 const makeStyles = (c: AppColorScheme, isDark: boolean) =>
   StyleSheet.create({
+    // ── Layout ──────────────────────────────────────────────
     container: { flex: 1, backgroundColor: c.bg },
     loadingContainer: {
       flex: 1,
@@ -443,99 +509,40 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
     loadingAppText: { color: c.textMuted, fontSize: 16 },
     background: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0 },
     safeArea: { flex: 1 },
-    scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20 },
+    scrollContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20 },
 
-    cardWrapper: {
-      borderRadius: 32,
-      padding: 24,
-      marginBottom: 24,
-      backgroundColor: isDark ? c.card : "#ffffff",
-      borderWidth: 1,
-      borderColor: c.cardBorder,
+    // ── Header ──────────────────────────────────────────────
+    header: { marginBottom: 20 },
+    headerTopRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 4,
     },
-    header: { marginBottom: 20, alignItems: "center" },
+    title: {
+      color: c.text,
+      fontSize: 26,
+      fontWeight: "900",
+      letterSpacing: -0.5,
+    },
     dateAppText: {
       color: c.textMuted,
       fontSize: 12,
       fontWeight: "600",
-      letterSpacing: 0.6,
     },
-    title: { color: c.text, fontSize: 24, fontWeight: "900", marginTop: 4 },
     subTitle: {
-      color: c.textSecondary,
-      fontSize: 13,
-      fontWeight: "600",
-      marginTop: 2,
-      letterSpacing: 1,
-    },
-    slogan: {
-      color: c.accent,
-      fontSize: 11,
-      fontWeight: "700",
-      marginTop: 6,
-      letterSpacing: 0.5,
-    },
-
-    mainEmphasis: {
-      alignItems: "center",
-      paddingVertical: 12,
-    },
-    emphasisLabel: {
-      fontSize: 14,
-      fontWeight: "700",
-      marginBottom: 6,
-    },
-    emphasisValue: {
-      fontSize: 36,
-      fontWeight: "900",
-      letterSpacing: -1,
-    },
-    emphasisUnitLabel: {
+      color: c.textMuted,
       fontSize: 12,
-      marginTop: 4,
-      fontWeight: "500",
-    },
-
-    balanceSection: {
-      flexDirection: "row",
-      alignItems: "center", // Changed from baseline to center for better +/- alignment
-      justifyContent: "center",
-      marginTop: 8,
-    },
-    negativeSign: {
-      fontSize: 36, // Match balanceInteger size
-      fontWeight: "900",
-      marginRight: 2,
-    },
-    currencySymbol: {
-      fontSize: 20,
-      fontWeight: "600",
-      marginRight: 4,
-    },
-    balanceInteger: {
-      fontSize: 36,
-      fontWeight: "900",
-      letterSpacing: -1,
-    },
-    balanceDecimal: {
-      fontSize: 20,
       fontWeight: "400",
+      lineHeight: 17,
     },
-    swipeHint: {
-      fontSize: 11,
-      textAlign: "center",
-      marginTop: 16,
-      fontWeight: "500",
-      letterSpacing: 0.5,
-    },
+    slogan: { color: c.textMuted, fontSize: 11 },
 
-    unitSelectorContainer: {
-      marginBottom: 16,
-    },
+    // ── Unit Selector ────────────────────────────────────────
+    unitSelectorContainer: { marginBottom: 12 },
     unitSelector: {
       flexDirection: "row",
       justifyContent: "center",
-      marginBottom: 12,
       backgroundColor: c.card,
       alignSelf: "center",
       borderRadius: 12,
@@ -552,34 +559,91 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
     unitBtnAppText: { color: c.textMuted, fontSize: 14, fontWeight: "600" },
     unitBtnAppTextActive: { color: c.accent },
 
+    // ── Main Card ────────────────────────────────────────────
+    cardWrapper: {
+      borderRadius: 28,
+      padding: 24,
+      paddingBottom: 16,
+      marginBottom: 16,
+      backgroundColor: isDark ? c.card : "#ffffff",
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      shadowColor: isDark ? "#000" : "#a0aec0",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: isDark ? 0.45 : 0.12,
+      shadowRadius: 24,
+      elevation: 8,
+    },
+    cardDivider: {
+      height: 1,
+      backgroundColor: c.separator,
+      marginTop: 12,
+      marginBottom: 10,
+    },
+    mainEmphasis: { alignItems: "center", paddingVertical: 12 },
+    emphasisLabel: { fontSize: 13, fontWeight: "600" },
+    emphasisValue: { fontSize: 36, fontWeight: "900", letterSpacing: -1 },
+    emphasisUnitLabel: { fontSize: 12, marginTop: 4, fontWeight: "500" },
+    balanceSection: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 8,
+    },
+    negativeSign: { fontSize: 36, fontWeight: "900", marginRight: 2 },
+    currencySymbol: { fontSize: 20, fontWeight: "600", marginRight: 4 },
+    balanceInteger: { fontSize: 36, fontWeight: "900", letterSpacing: -1 },
+    balanceDecimal: { fontSize: 20, fontWeight: "400" },
+    burnLabelRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginBottom: 6,
+    },
+    pulseDot: { width: 8, height: 8, borderRadius: 4 },
+    swipeHint: {
+      fontSize: 11,
+      textAlign: "center",
+      fontWeight: "500",
+      letterSpacing: 0.3,
+    },
+
+    // ── Stats Card ───────────────────────────────────────────
     statsCard: {
       backgroundColor: c.card,
       borderRadius: 24,
-      padding: 24,
+      padding: 20,
       borderWidth: 1,
-      borderColor: c.cardBorder,
+      borderColor: c.dangerBorder,
+      shadowColor: c.danger,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 3,
     },
     statRow: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: 8,
+      marginBottom: 6,
     },
-    statLabel: { color: c.textSecondary, fontSize: 14, fontWeight: "500" },
-    statValue: { color: c.text, fontSize: 22, fontWeight: "700" },
-    statSubtext: {
-      color: c.textMuted,
-      fontSize: 12,
-      marginTop: 6,
-      lineHeight: 18,
-    },
+    statLabel: { color: c.textSecondary, fontSize: 13, fontWeight: "500" },
+    statValue: { fontSize: 20, fontWeight: "700" },
+    statSubtext: { color: c.textMuted, fontSize: 12, lineHeight: 18 },
+
+    // ── AI Card ──────────────────────────────────────────────
     aiCard: {
       backgroundColor: c.purpleBg,
       borderRadius: 24,
-      padding: 24,
+      padding: 20,
       borderWidth: 1,
       borderColor: c.purpleBorder,
       marginTop: 12,
+      shadowColor: c.purple,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 3,
     },
     aiCardLabel: { color: c.purple, fontSize: 14, fontWeight: "600" },
     planAppText: {

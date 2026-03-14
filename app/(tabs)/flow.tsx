@@ -3,6 +3,7 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
+  LayoutAnimation,
   Modal,
   ScrollView,
   StyleSheet,
@@ -12,10 +13,20 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Calendar, LocaleConfig } from "react-native-calendars";
 import { useAppTheme } from "../../hooks/useAppTheme";
 import { useFinanceStore, Transaction, Asset } from "../../src/store/useFinanceStore";
 import { AppText } from "../../src/components/AppText";
 import { formatNumber } from "../../src/utils/format";
+
+LocaleConfig.locales["ko"] = {
+  monthNames: ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"],
+  monthNamesShort: ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"],
+  dayNames: ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"],
+  dayNamesShort: ["일", "월", "화", "수", "목", "금", "토"],
+  today: "오늘"
+};
+LocaleConfig.defaultLocale = "ko";
 
 const CATEGORIES = [
   { id: "식비", icon: "fast-food" },
@@ -163,6 +174,42 @@ export default function FlowScreen() {
     return (cat?.icon || "ellipsis-horizontal") as any;
   };
 
+  const [calendarExpanded, setCalendarExpanded] = useState(false);
+
+  const toggleCalendar = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setCalendarExpanded(!calendarExpanded);
+  };
+
+  const markedDates = useMemo(() => {
+    const marks: Record<string, any> = {};
+    transactions.forEach(tx => {
+      if (!marks[tx.date]) {
+        marks[tx.date] = { dots: [] };
+      }
+      const color = tx.type === "expense" ? colors.danger : tx.type === "income" ? colors.accent : colors.text;
+      if (!marks[tx.date].dots.find((d: any) => d.color === color)) {
+        marks[tx.date].dots.push({ key: `${tx.type}-${color}`, color });
+      }
+    });
+
+    const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
+    if (!marks[selectedDateStr]) {
+      marks[selectedDateStr] = {};
+    }
+    marks[selectedDateStr].selected = true;
+    marks[selectedDateStr].selectedColor = colors.cardBorder;
+    
+    return marks;
+  }, [transactions, selectedDate, colors]);
+
+  const onDayPress = (day: any) => {
+    const newDate = new Date(day.timestamp);
+    // Since React Native Calendars timestamp is UTC based, we can create the local date string to avoid timezone offset issues
+    const localDate = new Date(day.year, day.month - 1, day.day);
+    setSelectedDate(localDate);
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Month Selector */}
@@ -170,32 +217,69 @@ export default function FlowScreen() {
         <TouchableOpacity onPress={() => changeMonth(-1)}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <AppText style={[styles.title, { color: colors.text }]}>
-          {selectedDate.getFullYear()}년 {selectedDate.getMonth() + 1}월
-        </AppText>
+        <TouchableOpacity onPress={toggleCalendar} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <AppText style={[styles.title, { color: colors.text }]}>
+            {selectedDate.getFullYear()}년 {selectedDate.getMonth() + 1}월
+          </AppText>
+          <Ionicons 
+            name="calendar" 
+            size={20} 
+            color={calendarExpanded ? colors.text : colors.textMuted} 
+          />
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => changeMonth(1)}>
           <Ionicons name="chevron-forward" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
 
+      {calendarExpanded && (
+        <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+          <Calendar
+            current={`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`}
+            onDayPress={onDayPress}
+            onMonthChange={(month: any) => {
+              const localDate = new Date(month.year, month.month - 1, 1);
+              setSelectedDate(localDate);
+            }}
+            markingType={'multi-dot'}
+            markedDates={markedDates}
+            theme={{
+              backgroundColor: colors.bg,
+              calendarBackground: colors.bg,
+              textSectionTitleColor: colors.textMuted,
+              selectedDayBackgroundColor: colors.cardBorder,
+              selectedDayTextColor: colors.text,
+              todayTextColor: colors.accent,
+              dayTextColor: colors.text,
+              textDisabledColor: colors.textMuted,
+              dotColor: colors.accent,
+              selectedDotColor: colors.accent,
+              arrowColor: colors.text,
+              monthTextColor: colors.text,
+              indicatorColor: colors.accent,
+            }}
+          />
+        </View>
+      )}
+
       {/* Summary Card */}
       <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
         <View style={styles.summaryItem}>
-          <AppText style={styles.summaryLabel}>수입</AppText>
+          <AppText style={[styles.summaryLabel, { color: colors.textMuted }]}>수입</AppText>
           <AppText style={[styles.summaryValue, { color: colors.accent }]}>
             ₩{formatNumber(monthSummary.income, 0)}
           </AppText>
         </View>
-        <View style={styles.summaryDivider} />
+        <View style={[styles.summaryDivider, { backgroundColor: colors.separator }]} />
         <View style={styles.summaryItem}>
-          <AppText style={styles.summaryLabel}>지출</AppText>
+          <AppText style={[styles.summaryLabel, { color: colors.textMuted }]}>지출</AppText>
           <AppText style={[styles.summaryValue, { color: colors.danger }]}>
             ₩{formatNumber(monthSummary.expense, 0)}
           </AppText>
         </View>
-        <View style={styles.summaryDivider} />
+        <View style={[styles.summaryDivider, { backgroundColor: colors.separator }]} />
         <View style={styles.summaryItem}>
-          <AppText style={styles.summaryLabel}>순이익</AppText>
+          <AppText style={[styles.summaryLabel, { color: colors.textMuted }]}>순이익</AppText>
           <AppText style={[styles.summaryValue, { color: colors.text }]}>
             ₩{formatNumber(monthSummary.profit, 0)}
           </AppText>
@@ -223,19 +307,18 @@ export default function FlowScreen() {
               <AppText style={[styles.txDescription, { color: colors.text }]}>
                 {item.description}
               </AppText>
-              <AppText style={[styles.txDate, { color: colors.textMuted }]}>
-                {item.date} • {item.category || "미분류"}
-              </AppText>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <AppText style={[styles.txDate, { color: colors.textMuted }]}>
+                  {item.date} • {item.category || "미분류"}
+                </AppText>
+                {item.isFixed && (
+                  <View style={[styles.fixedBadge, { backgroundColor: colors.accentBg }]}>
+                    <AppText style={[styles.fixedBadgeText, { color: colors.accent }]}>고정</AppText>
+                  </View>
+                )}
+              </View>
             </View>
             <View style={styles.txAmountWrapper}>
-              {item.isFixed ? (
-                <Ionicons
-                  name="repeat"
-                  size={14}
-                  color={colors.textSecondary}
-                  style={{ marginRight: 4 }}
-                />
-              ) : null}
               <AppText
                 style={[
                   styles.txAmount,
@@ -272,8 +355,8 @@ export default function FlowScreen() {
           <View
             style={[
               styles.modalContent,
-              { 
-                backgroundColor: isDark ? "#1a2235" : "#fff", 
+              {
+                backgroundColor: isDark ? "#0d1a30" : "#ffffff",
                 borderColor: colors.cardBorder,
               },
             ]}
@@ -351,7 +434,7 @@ export default function FlowScreen() {
               />
 
               {/* Asset Picker (Payment Method) */}
-              <AppText style={styles.sectionLabel}>결제 수단 / 자산</AppText>
+              <AppText style={[styles.sectionLabel, { color: colors.textMuted }]}>결제 수단 / 자산</AppText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.assetScroll}>
                 {assets.map(asset => (
                   <TouchableOpacity
@@ -370,7 +453,7 @@ export default function FlowScreen() {
 
               {type === "transfer" && (
                 <>
-                  <AppText style={styles.sectionLabel}>받는 자산</AppText>
+                  <AppText style={[styles.sectionLabel, { color: colors.textMuted }]}>받는 자산</AppText>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.assetScroll}>
                     {assets.map(asset => (
                       <TouchableOpacity
@@ -390,7 +473,7 @@ export default function FlowScreen() {
               )}
 
               {/* Category Picker */}
-              <AppText style={styles.sectionLabel}>카테고리</AppText>
+              <AppText style={[styles.sectionLabel, { color: colors.textMuted }]}>카테고리</AppText>
               <View style={styles.categoryGrid}>
                 {CATEGORIES.map(cat => (
                   <TouchableOpacity
@@ -409,7 +492,7 @@ export default function FlowScreen() {
               </View>
 
               {/* Date Input */}
-              <AppText style={styles.sectionLabel}>날짜</AppText>
+              <AppText style={[styles.sectionLabel, { color: colors.textMuted }]}>날짜</AppText>
               <TextInput
                 style={[
                   styles.input,
@@ -481,9 +564,9 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
   summaryItem: { alignItems: "center" },
-  summaryLabel: { fontSize: 11, fontWeight: "600", color: "#888", marginBottom: 4 },
+  summaryLabel: { fontSize: 11, fontWeight: "600", marginBottom: 4 },
   summaryValue: { fontSize: 16, fontWeight: "800" },
-  summaryDivider: { width: 1, height: 30, backgroundColor: "#eee" },
+  summaryDivider: { width: 1, height: 30 },
   list: { padding: 20, paddingBottom: 100 },
   transactionItem: {
     flexDirection: "row",
@@ -498,6 +581,16 @@ const styles = StyleSheet.create({
   txInfo: { flex: 1 },
   txDescription: { fontSize: 16, fontWeight: "700", marginBottom: 2 },
   txDate: { fontSize: 12 },
+  fixedBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 6,
+  },
+  fixedBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+  },
   txAmountWrapper: { alignItems: "flex-end" },
   txAmount: { fontSize: 16, fontWeight: "800" },
   emptyContainer: { alignItems: "center", marginTop: 40 },
@@ -521,12 +614,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
   },
-  modalContent: { 
-    borderTopLeftRadius: 40, 
-    borderTopRightRadius: 40, 
-    padding: 28, 
+  modalContent: {
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    padding: 28,
     maxHeight: "90%",
-    paddingBottom: 40
+    paddingBottom: 40,
+    borderWidth: 1,
   },
   modalTitle: {
     fontSize: 20,
@@ -551,7 +645,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 16,
   },
-  sectionLabel: { fontSize: 13, fontWeight: "700", color: "#888", marginBottom: 12, marginTop: 4 },
+  sectionLabel: { fontSize: 13, fontWeight: "700", marginBottom: 12, marginTop: 4 },
   assetScroll: { marginBottom: 20 },
   assetBtn: { 
     paddingHorizontal: 16, 
