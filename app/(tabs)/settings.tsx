@@ -4,13 +4,13 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppColorScheme } from "../../constants/theme";
 import { useAppTheme } from "../../hooks/useAppTheme";
+import { AppText } from "../../src/components/AppText";
 import { useFinanceStore } from "../../src/store/useFinanceStore";
 
 export default function SettingsScreen() {
@@ -39,7 +39,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>설정</Text>
+        <AppText style={[styles.title, { color: colors.text }]}>설정</AppText>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -49,9 +49,9 @@ export default function SettingsScreen() {
             { backgroundColor: colors.card, borderColor: colors.cardBorder },
           ]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+          <AppText style={[styles.sectionTitle, { color: colors.textMuted }]}>
             앱 설정
-          </Text>
+          </AppText>
 
           <TouchableOpacity style={styles.menuItem} onPress={toggleTheme}>
             <View
@@ -66,9 +66,9 @@ export default function SettingsScreen() {
                 color={colors.accent}
               />
             </View>
-            <Text style={[styles.menuLabel, { color: colors.text }]}>
+            <AppText style={[styles.menuLabel, { color: colors.text }]}>
               테마 변경 ({isDark ? "다크" : "라이트"})
-            </Text>
+            </AppText>
             <Ionicons
               name="chevron-forward"
               size={18}
@@ -88,9 +88,9 @@ export default function SettingsScreen() {
             >
               <Ionicons name="refresh" size={20} color={colors.danger} />
             </View>
-            <Text style={[styles.menuLabel, { color: colors.text }]}>
+            <AppText style={[styles.menuLabel, { color: colors.text }]}>
               샘플 데이터 로드
-            </Text>
+            </AppText>
             <Ionicons
               name="chevron-forward"
               size={18}
@@ -105,38 +105,45 @@ export default function SettingsScreen() {
             { backgroundColor: colors.card, borderColor: colors.cardBorder },
           ]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+          <AppText style={[styles.sectionTitle, { color: colors.textMuted }]}>
             앱 정보
-          </Text>
+          </AppText>
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>
+            <AppText
+              style={[styles.infoLabel, { color: colors.textSecondary }]}
+            >
               앱 이름
-            </Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>
-              Tung-sim Live
-            </Text>
+            </AppText>
+            <AppText style={[styles.infoValue, { color: colors.text }]}>
+              텅-장 시뮬레이터(Tung-sim Live)
+            </AppText>
           </View>
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>
+            <AppText
+              style={[styles.infoLabel, { color: colors.textSecondary }]}
+            >
               버전
-            </Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>
-              1.0.0 (Final)
-            </Text>
+            </AppText>
+            <AppText style={[styles.infoValue, { color: colors.text }]}>
+              v1.0.0
+            </AppText>
           </View>
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>
+            <AppText
+              style={[styles.infoLabel, { color: colors.textSecondary }]}
+            >
               개발자
-            </Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>
-              Ziro x Antigravity
-            </Text>
+            </AppText>
+            <AppText style={[styles.infoValue, { color: colors.text }]}>
+              Ziro
+            </AppText>
           </View>
         </View>
 
-        <Text style={styles.footerText}>
-          지갑의 심박수를 느껴라 • Tung-sim Live
-        </Text>
+        <AppText style={styles.footerAppText}>
+          "지갑의 심박수를 느끼다"{"\n\n"}
+          텅-장 시뮬레이터: Tung-sim Live
+        </AppText>
       </ScrollView>
     </SafeAreaView>
   );
@@ -177,7 +184,7 @@ const makeStyles = (c: AppColorScheme) =>
     },
     infoLabel: { fontSize: 14 },
     infoValue: { fontSize: 14, fontWeight: "600" },
-    footerText: {
+    footerAppText: {
       textAlign: "center",
       color: c.textMuted,
       fontSize: 12,

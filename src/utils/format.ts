@@ -1,15 +1,23 @@
-export const formatNumber = (val: string | number): string => {
+export const formatNumber = (
+  val: string | number,
+  precision: number = 1,
+): string => {
   if (val === null || val === undefined || val === "") return "";
 
-  const str = val.toString();
+  // Remove commas if string and convert to number
+  const cleanVal = typeof val === "string" ? val.replace(/,/g, "") : val;
+  const num = Number(cleanVal);
+
+  if (isNaN(num)) return "";
+
+  // Format to requested decimal places
+  const str = num.toFixed(precision);
   const isNegative = str.startsWith("-");
 
   // Split into integer and decimal parts
-  const parts = str.replace(/[^0-9.-]/g, "").split(".");
+  const parts = str.split(".");
   let integerPart = parts[0].replace(/-/g, "");
-  const decimalPart = parts.length > 1 ? parts[1] : null;
-
-  if (!integerPart && !decimalPart) return isNegative ? "-" : "";
+  const decimalPart = parts[1];
 
   // Format integer part with commas
   let formattedInteger = "";
@@ -23,9 +31,7 @@ export const formatNumber = (val: string | number): string => {
   }
 
   const result =
-    decimalPart !== null
-      ? `${formattedInteger}.${decimalPart}`
-      : formattedInteger;
+    precision > 0 ? `${formattedInteger}.${decimalPart}` : formattedInteger;
   return isNegative ? `-${result}` : result;
 };
 

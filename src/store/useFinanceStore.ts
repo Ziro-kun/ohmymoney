@@ -29,7 +29,7 @@ export interface Expense {
 
 export interface Transaction {
   id: number;
-  description: string;
+  name: string;
   amount: number;
   date: string;
   type: "income" | "expense" | "transfer";
@@ -63,14 +63,14 @@ interface FinanceState {
   ) => Promise<void>;
   deleteAsset: (id: number) => Promise<void>;
   addTransaction: (
-    description: string,
+    name: string,
     amount: number,
     type: "income" | "expense",
     isFixed?: boolean,
   ) => Promise<void>;
   updateTransaction: (
     id: number,
-    description: string,
+    name: string,
     amount: number,
     type: "income" | "expense",
     isFixed?: boolean,
@@ -140,8 +140,9 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     }, 0);
 
     const netWorth = baseNetWorth + txBalance;
-    const dailyBurnRate = calculateDailyBurn(expensesData, transactionsData);
-    const perSecondBurnRate = dailyBurnRate / (24 * 60 * 60);
+    const rawDailyBurnRate = calculateDailyBurn(expensesData, transactionsData);
+    const dailyBurnRate = Number(rawDailyBurnRate.toFixed(1));
+    const perSecondBurnRate = rawDailyBurnRate / (24 * 60 * 60);
 
     set({
       isInitialized: true,
@@ -169,13 +170,13 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await get().loadData();
   },
 
-  addTransaction: async (description, amount, type, isFixed) => {
-    await addTransaction(description, amount, type, isFixed);
+  addTransaction: async (name, amount, type, isFixed) => {
+    await addTransaction(name, amount, type, isFixed);
     await get().loadData();
   },
 
-  updateTransaction: async (id, description, amount, type, isFixed) => {
-    await updateTransaction(id, description, amount, type, isFixed);
+  updateTransaction: async (id, name, amount, type, isFixed) => {
+    await updateTransaction(id, name, amount, type, isFixed);
     await get().loadData();
   },
 

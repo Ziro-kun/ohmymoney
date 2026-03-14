@@ -5,7 +5,6 @@ import {
   FlatList,
   Modal,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -13,10 +12,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppTheme } from "../../hooks/useAppTheme";
 import { useFinanceStore } from "../../src/store/useFinanceStore";
+import { AppText } from "../../src/components/AppText";
 import { formatNumber } from "../../src/utils/format";
 
 export default function StockScreen() {
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
   const { assets, netWorth, loadData, addAsset, updateAsset, deleteAsset } =
     useFinanceStore();
 
@@ -43,7 +43,7 @@ export default function StockScreen() {
   const openEditModal = (asset: any) => {
     setEditingAsset(asset);
     setName(asset.name);
-    setAmount(formatNumber(asset.amount));
+    setAmount(formatNumber(asset.amount, 0));
     setType(asset.type);
     setModalVisible(true);
   };
@@ -63,9 +63,9 @@ export default function StockScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>
+        <AppText style={[styles.title, { color: colors.text }]}>
           자산관리 (Stock)
-        </Text>
+        </AppText>
         <TouchableOpacity
           style={[styles.addButton, { backgroundColor: colors.accent }]}
           onPress={openAddModal}
@@ -80,17 +80,17 @@ export default function StockScreen() {
           { backgroundColor: colors.card, borderColor: colors.cardBorder },
         ]}
       >
-        <Text style={[styles.netWorthLabel, { color: colors.textMuted }]}>
+        <AppText style={[styles.netWorthLabel, { color: colors.textMuted }]}>
           현재 순자산
-        </Text>
-        <Text style={[styles.netWorthValue, { color: colors.text }]}>
-          ₩{formatNumber(netWorth)}
-        </Text>
+        </AppText>
+        <AppText style={[styles.netWorthValue, { color: colors.text }]}>
+          ₩{formatNumber(netWorth, 0)}
+        </AppText>
       </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+      <AppText style={[styles.sectionTitle, { color: colors.textMuted }]}>
         보유 자산 및 부채
-      </Text>
+      </AppText>
       <FlatList
         data={assets}
         keyExtractor={(item) => item.id.toString()}
@@ -104,14 +104,14 @@ export default function StockScreen() {
             onPress={() => openEditModal(item)}
           >
             <View style={styles.assetInfo}>
-              <Text style={[styles.assetName, { color: colors.text }]}>
+              <AppText style={[styles.assetName, { color: colors.text }]}>
                 {item.name}
-              </Text>
-              <Text style={[styles.assetType, { color: colors.textMuted }]}>
+              </AppText>
+              <AppText style={[styles.assetType, { color: colors.textMuted }]}>
                 {item.type === "asset" ? "자산/투자" : "부채/대출"}
-              </Text>
+              </AppText>
             </View>
-            <Text
+            <AppText
               style={[
                 styles.assetAmount,
                 {
@@ -120,23 +120,34 @@ export default function StockScreen() {
               ]}
             >
               {item.type === "liability" ? "-" : ""}
-              {formatNumber(item.amount)}원
-            </Text>
+              {formatNumber(item.amount, 0)}원
+            </AppText>
           </TouchableOpacity>
         )}
       />
 
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
+      <Modal visible={modalVisible} animationType="fade" transparent>
+        <View style={[
+          styles.modalOverlay,
+          { backgroundColor: isDark ? "rgba(0,0,0,0.8)" : "rgba(0,0,0,0.4)" }
+        ]}>
           <View
             style={[
               styles.modalContent,
-              { backgroundColor: colors.card, borderColor: colors.cardBorder },
+              { 
+                backgroundColor: isDark ? "#1a2235" : colors.card, 
+                borderColor: colors.cardBorder,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.3,
+                shadowRadius: 20,
+                elevation: 10
+              },
             ]}
           >
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
+            <AppText style={[styles.modalTitle, { color: colors.text }]}>
               {editingAsset ? "자산 수정" : "자산 추가"}
-            </Text>
+            </AppText>
 
             <View style={styles.typeSelector}>
               <TouchableOpacity
@@ -146,14 +157,14 @@ export default function StockScreen() {
                 ]}
                 onPress={() => setType("asset")}
               >
-                <Text
+                <AppText
                   style={[
                     styles.typeBtnText,
                     type === "asset" && { color: "#FFF" },
                   ]}
                 >
                   자산
-                </Text>
+                </AppText>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -162,14 +173,14 @@ export default function StockScreen() {
                 ]}
                 onPress={() => setType("liability")}
               >
-                <Text
+                <AppText
                   style={[
                     styles.typeBtnText,
                     type === "liability" && { color: "#FFF" },
                   ]}
                 >
                   부채
-                </Text>
+                </AppText>
               </TouchableOpacity>
             </View>
 
@@ -199,8 +210,11 @@ export default function StockScreen() {
               placeholder="금액 (원)"
               placeholderTextColor={colors.textMuted}
               keyboardType="number-pad"
-              value={formatNumber(amount)}
-              onChangeText={(text) => setAmount(formatNumber(text))}
+              value={formatNumber(amount, 0)}
+              onChangeText={(text) => {
+                const numericValue = text.replace(/[^0-9]/g, "");
+                setAmount(numericValue);
+              }}
             />
 
             <View style={styles.modalActions}>
@@ -213,7 +227,7 @@ export default function StockScreen() {
                   }}
                   style={styles.deleteBtn}
                 >
-                  <Text style={{ color: colors.danger }}>삭제</Text>
+                  <AppText style={{ color: colors.danger }}>삭제</AppText>
                 </TouchableOpacity>
               )}
               <View style={{ flex: 1 }} />
@@ -221,13 +235,13 @@ export default function StockScreen() {
                 onPress={() => setModalVisible(false)}
                 style={styles.cancelBtn}
               >
-                <Text style={{ color: colors.textMuted }}>취소</Text>
+                <AppText style={{ color: colors.textMuted }}>취소</AppText>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleSave}
                 style={[styles.saveBtn, { backgroundColor: colors.accent }]}
               >
-                <Text style={{ color: "#FFF", fontWeight: "700" }}>저장</Text>
+                <AppText style={{ color: "#FFF", fontWeight: "700" }}>저장</AppText>
               </TouchableOpacity>
             </View>
           </View>
@@ -284,37 +298,37 @@ const styles = StyleSheet.create({
   assetAmount: { fontSize: 18, fontWeight: "700" },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     padding: 20,
   },
-  modalContent: { borderRadius: 24, padding: 24, borderWidth: 1 },
+  modalContent: { borderRadius: 32, padding: 28, borderWidth: 1 },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "800",
     marginBottom: 24,
     textAlign: "center",
+    letterSpacing: -0.5,
   },
-  typeSelector: { flexDirection: "row", marginBottom: 16, gap: 10 },
+  typeSelector: { flexDirection: "row", marginBottom: 20, gap: 12 },
   typeBtn: {
     flex: 1,
-    padding: 12,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 16,
     alignItems: "center",
     backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#ccc",
+    borderWidth: 1.5,
   },
-  typeBtnText: { fontWeight: "600" },
+  typeBtnText: { fontWeight: "700", fontSize: 15 },
   input: {
-    height: 50,
-    borderRadius: 12,
+    height: 56,
+    borderRadius: 16,
     borderWidth: 1,
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingHorizontal: 18,
+    marginBottom: 14,
+    fontSize: 16,
   },
   modalActions: { flexDirection: "row", alignItems: "center", marginTop: 12 },
-  deleteBtn: { padding: 10 },
-  cancelBtn: { padding: 10, marginRight: 10 },
-  saveBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  deleteBtn: { paddingVertical: 10, paddingHorizontal: 5 },
+  cancelBtn: { padding: 10, marginRight: 8 },
+  saveBtn: { paddingHorizontal: 28, paddingVertical: 14, borderRadius: 16 },
 });
