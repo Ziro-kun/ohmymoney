@@ -134,32 +134,40 @@ import { DAYS_IN_MONTH, DAYS_IN_YEAR } from "../../constants/finance";
 const calculateDailyBurn = (
   expenses: Expense[] = [],
   transactions: Transaction[] = [],
+  assets: Asset[] = []
 ) => {
+  // 1. Manual recurring expenses (from expenses table)
   const expenseBurn = expenses.reduce((total, exp) => {
     const amt = Number(exp.amount) || 0;
     switch (exp.frequency) {
-      case "daily":
-        return total + amt;
-      case "weekly":
-        return total + amt / 7;
-      case "monthly":
-        return total + amt / DAYS_IN_MONTH;
-      case "yearly":
-        return total + amt / DAYS_IN_YEAR;
-      default:
-        return total;
+      case "daily": return total + amt;
+      case "weekly": return total + amt / 7;
+      case "monthly": return total + amt / DAYS_IN_MONTH;
+      case "yearly": return total + amt / DAYS_IN_YEAR;
+      default: return total;
     }
   }, 0);
 
+  // 2. Fixed transactions (Repayments & Recurring Expenses)
   const txBurn = transactions.reduce((total, tx) => {
     const amt = Number(tx.amount) || 0;
-    if (tx.isFixed && tx.type === "expense") {
+    // Count both fixed expenses and fixed transfers (like loan repayments)
+    if (tx.isFixed && (tx.type === "expense" || tx.type === "transfer")) {
       return total + amt / DAYS_IN_MONTH;
     }
     return total;
   }, 0);
 
-  return expenseBurn + txBurn;
+  // 3. Asset Depreciation (A real drop in Net Worth over time)
+  const depreciationBurn = assets.reduce((total, asset) => {
+    if (asset.type === "asset" && asset.assetCategory === "vehicle" && asset.depreciationRate) {
+      const annualDepreciation = (Number(asset.amount) || 0) * (Number(asset.depreciationRate) / 100);
+      return total + (annualDepreciation / DAYS_IN_YEAR);
+    }
+    return total;
+  }, 0);
+
+  return expenseBurn + txBurn + depreciationBurn;
 };
 
 export const useFinanceStore = create<FinanceState>((set, get) => ({
@@ -185,19 +193,19 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     const updatedAssets = assetsData.map(asset => {
       const balanceChange = effectiveTxs.reduce((change, tx) => {
         const txAmt = Number(tx.amount) || 0;
-        // 1. From this asset
+        // 1. From this asset (Money LEAVING)
         if (tx.assetId === asset.id) {
           if (tx.type === "income") return change + txAmt;
           if (tx.type === "expense") return change - txAmt;
-          // For Liability, "transferring out" means borrowing more
           if (tx.type === "transfer") {
+            // For Liability, "transferring out" means borrowing more money
             return asset.type === "liability" ? change + txAmt : change - txAmt;
           }
         }
-        // 2. To this asset
+        // 2. To this asset (Money ENTERING)
         if (tx.toAssetId === asset.id) {
-          // For Liability, "receiving transfer" means repayment (balance goes down)
           if (tx.type === "transfer") {
+            // For Liability, "receiving transfer" means repayment (balance goes down)
             return asset.type === "liability" ? change - txAmt : change + txAmt;
           }
         }
@@ -211,18 +219,15 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     const depreciatedAssets = updatedAssets.map(asset => {
       let currentAmt = asset.amount;
       if (asset.type === "asset" && asset.assetCategory === "vehicle" && asset.depreciationRate) {
-        // SQLite CURRENT_TIMESTAMP is UTC. Ensure JS treats it as UTC by appending 'Z'
         const dateStr = asset.createdAt ? (asset.createdAt.includes(" ") ? asset.createdAt.replace(" ", "T") + "Z" : asset.createdAt) : null;
         const createdAt = dateStr ? new Date(dateStr) : now;
-        
-        // Calculate diff in days to avoid millisecond-level jitter and timezone issues on day 0
         const diffInMs = now.getTime() - createdAt.getTime();
         const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
         
         if (diffInDays > 0) {
           const yearsElapsed = diffInDays / 365;
           const rate = Number(asset.depreciationRate) || 0;
-          const depreciation = currentAmt * (rate / 100) * yearsElapsed;
+          const depreciation = (Number(asset.amount) || 0) * (rate / 100) * yearsElapsed;
           currentAmt = Math.max(0, currentAmt - depreciation);
         }
       }
@@ -236,7 +241,8 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
         : total - amt;
     }, 0);
 
-    const rawDailyBurnRate = calculateDailyBurn(expensesData, transactionsData);
+    // CRITICAL: Pass updated assets to the calculator to include depreciation burn
+    const rawDailyBurnRate = calculateDailyBurn(expensesData, transactionsData, depreciatedAssets);
     const dailyBurnRate = Number(rawDailyBurnRate.toFixed(1));
     const perSecondBurnRate = rawDailyBurnRate / (24 * 60 * 60);
 

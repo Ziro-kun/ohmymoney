@@ -445,7 +445,7 @@ export default function DashboardScreen() {
 
 function AICard() {
   const { netWorth, dailyBurnRate } = useFinanceStore();
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
 
   const annualInterestRate = ANNUAL_INTEREST_RATE;
   const dailyInterestRate = annualInterestRate / 365;
@@ -469,7 +469,7 @@ function AICard() {
   if (severityRatio > SEVERITY_RATIO_MODERATE) aiStrategyIndex = 1;
   if (severityRatio > SEVERITY_RATIO_SEVERE) aiStrategyIndex = 2;
 
-  const styles = useMemo(() => makeStyles(colors, false), [colors]);
+  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
 
   return (
     <View style={styles.aiCard}>
@@ -553,7 +553,7 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
       backgroundColor: isDark ? c.accent : "#e2e8f0",
     },
     unitBtnAppText: { color: c.textMuted, fontSize: 14, fontWeight: "600" },
-    unitBtnAppTextActive: { color: c.accent },
+    unitBtnAppTextActive: { color: isDark ? "#ffffff" : c.accent },
 
     // ── Main Card ────────────────────────────────────────────
     cardWrapper: {
