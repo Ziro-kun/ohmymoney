@@ -20,6 +20,7 @@ import { DebtManageWizardModal } from "../../src/components/DebtManageWizardModa
 
 export default function StockScreen() {
   const { colors, isDark } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
   const { assets, netWorth, loadData, addAsset, updateAsset, deleteAsset } =
     useFinanceStore();
 
@@ -311,7 +312,7 @@ export default function StockScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: "row",
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
     padding: 30,
     borderRadius: 24,
     alignItems: "center",
-    borderWidth: 1,
+    backgroundColor: isDark ? "#121e33" : "#f1f5f9",
   },
   netWorthLabel: { fontSize: 14, fontWeight: "600", marginBottom: 8 },
   netWorthValue: { fontSize: 32, fontWeight: "800", letterSpacing: -1 },
@@ -342,15 +343,15 @@ const styles = StyleSheet.create({
     marginLeft: 20,
     marginBottom: 10,
   },
-  list: { paddingHorizontal: 20, paddingBottom: 40 },
+  list: { paddingHorizontal: 20, paddingBottom: 80 },
   assetItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     padding: 20,
     borderRadius: 16,
     marginBottom: 12,
-    borderWidth: 1,
     alignItems: "center",
+    backgroundColor: isDark ? "#121e33" : "#f8fafc",
   },
   assetInfo: { flex: 1 },
   assetName: { fontSize: 16, fontWeight: "700", marginBottom: 4 },
@@ -361,7 +362,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
   },
-  modalContent: { borderRadius: 32, padding: 28, borderWidth: 1 },
+  modalContent: { borderRadius: 32, padding: 28 },
   modalTitle: {
     fontSize: 22,
     fontWeight: "800",
@@ -383,7 +384,7 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingVertical: 9,
     borderRadius: 12,
-    borderWidth: 1,
+    backgroundColor: isDark ? "#1a2235" : "#f1f5f9",
   },
   wizardBtnText: {
     fontSize: 12,

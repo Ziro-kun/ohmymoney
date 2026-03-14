@@ -43,6 +43,7 @@ const CATEGORIES = [
 
 export default function FlowScreen() {
   const { colors, isDark } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
   const { 
     transactions, 
     assets,
@@ -543,7 +544,7 @@ export default function FlowScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: "row",
@@ -558,15 +559,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     padding: 16,
     borderRadius: 24,
-    borderWidth: 1,
     justifyContent: "space-around",
     alignItems: "center",
-    marginBottom: 20
+    marginBottom: 20,
+    backgroundColor: isDark ? "#121e33" : "#f1f5f9",
   },
   summaryItem: { alignItems: "center" },
-  summaryLabel: { fontSize: 11, fontWeight: "600", marginBottom: 4 },
+  summaryLabel: { fontSize: 11, fontWeight: "600", color: "#888", marginBottom: 4 },
   summaryValue: { fontSize: 16, fontWeight: "800" },
-  summaryDivider: { width: 1, height: 30 },
+  summaryDivider: { width: 1, height: 30, backgroundColor: "#eee" },
   list: { padding: 20, paddingBottom: 100 },
   transactionItem: {
     flexDirection: "row",
@@ -574,7 +575,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 20,
     marginBottom: 12,
-    borderWidth: 1,
+    backgroundColor: isDark ? "#121e33" : "#f8fafc",
   },
   txIconContainer: { marginRight: 14 },
   iconCircle: { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center" },

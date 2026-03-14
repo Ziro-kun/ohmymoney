@@ -236,14 +236,14 @@ export default function DashboardScreen() {
           contentContainerStyle={[
             styles.scrollContent,
             {
-              paddingBottom: Platform.OS === "ios" ? insets.bottom / 2 + 8 : 30,
+              paddingBottom: Math.max(insets.bottom, 60), // Increased buffer for navigation bar
             },
           ]}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
             <View style={styles.headerTopRow}>
-              <AppText style={styles.title}>텅심 Live</AppText>
+              <AppText style={styles.title}>Tung-sim Live</AppText>
               <AppText style={styles.dateAppText}>
                 {new Date().toLocaleDateString("ko-KR", {
                   year: "numeric",
@@ -543,18 +543,14 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
     unitSelector: {
       flexDirection: "row",
       justifyContent: "center",
-      backgroundColor: c.card,
+      backgroundColor: isDark ? "#1a2235" : "#edf2f7",
       alignSelf: "center",
       borderRadius: 12,
       padding: 4,
-      borderWidth: 1,
-      borderColor: c.cardBorder,
     },
     unitBtn: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 8 },
     unitBtnActive: {
-      backgroundColor: c.accentBg,
-      borderWidth: 1,
-      borderColor: c.accentBorder,
+      backgroundColor: isDark ? c.accent : c.accentBg,
     },
     unitBtnAppText: { color: c.textMuted, fontSize: 14, fontWeight: "600" },
     unitBtnAppTextActive: { color: c.accent },
@@ -565,14 +561,12 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
       padding: 24,
       paddingBottom: 16,
       marginBottom: 16,
-      backgroundColor: isDark ? c.card : "#ffffff",
-      borderWidth: 1,
-      borderColor: c.cardBorder,
-      shadowColor: isDark ? "#000" : "#a0aec0",
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: isDark ? 0.45 : 0.12,
-      shadowRadius: 24,
-      elevation: 8,
+      backgroundColor: isDark ? "#121e33" : "#f1f5f9", // Filled background instead of frame
+      // Removed borderWidth and borderColor to fix Android frame artifacts
+      shadowColor: isDark ? "#000" : "#cbd5e0",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: isDark ? 0.4 : 0.1,
+      shadowRadius: 16,
     },
     cardDivider: {
       height: 1,
@@ -613,13 +607,11 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
       backgroundColor: c.card,
       borderRadius: 24,
       padding: 20,
-      borderWidth: 1,
-      borderColor: c.dangerBorder,
-      shadowColor: c.danger,
+      shadowColor: isDark ? "#000" : c.danger,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.08,
       shadowRadius: 12,
-      elevation: 3,
+      elevation: 2,
     },
     statRow: {
       flexDirection: "row",
@@ -636,14 +628,12 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
       backgroundColor: c.purpleBg,
       borderRadius: 24,
       padding: 20,
-      borderWidth: 1,
-      borderColor: c.purpleBorder,
       marginTop: 12,
       shadowColor: c.purple,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.1,
       shadowRadius: 12,
-      elevation: 3,
+      elevation: 2,
     },
     aiCardLabel: { color: c.purple, fontSize: 14, fontWeight: "600" },
     planAppText: {
