@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
   Modal,
+  ScrollView,
   StyleSheet,
   Switch,
   TextInput,
@@ -12,22 +13,48 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppTheme } from "../../hooks/useAppTheme";
-import { useFinanceStore } from "../../src/store/useFinanceStore";
+import { useFinanceStore, Transaction, Asset } from "../../src/store/useFinanceStore";
 import { AppText } from "../../src/components/AppText";
 import { formatNumber } from "../../src/utils/format";
 
+const CATEGORIES = [
+  { id: "식비", icon: "fast-food" },
+  { id: "교통", icon: "bus" },
+  { id: "쇼핑", icon: "cart" },
+  { id: "의료", icon: "medkit" },
+  { id: "주거", icon: "home" },
+  { id: "생활", icon: "shirt" },
+  { id: "문화", icon: "film" },
+  { id: "수입", icon: "cash" },
+  { id: "이체", icon: "swap-horizontal" },
+  { id: "기타", icon: "ellipsis-horizontal" },
+];
+
 export default function FlowScreen() {
   const { colors, isDark } = useAppTheme();
-  const { transactions, loadData, addTransaction, updateTransaction, deleteTransaction } =
-    useFinanceStore();
+  const { 
+    transactions, 
+    assets,
+    loadData, 
+    addTransaction, 
+    updateTransaction, 
+    deleteTransaction 
+  } = useFinanceStore();
+
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   
-  const [type, setType] = useState<"expense" | "income">("expense");
-  const [name, setName] = useState("");
+  // Form States
+  const [type, setType] = useState<"expense" | "income" | "transfer">("expense");
+  const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [isFixed, setIsFixed] = useState(false);
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [category, setCategory] = useState("기타");
+  const [assetId, setAssetId] = useState<number | undefined>(undefined);
+  const [toAssetId, setToAssetId] = useState<number | undefined>(undefined);
 
   useFocusEffect(
     useCallback(() => {
@@ -35,44 +62,91 @@ export default function FlowScreen() {
     }, [loadData]),
   );
 
+  const filteredTransactions = useMemo(() => {
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth();
+    return transactions.filter(tx => {
+      const d = new Date(tx.date);
+      return d.getFullYear() === year && d.getMonth() === month;
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [transactions, selectedDate]);
+
+  const monthSummary = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    filteredTransactions.forEach(tx => {
+      if (tx.type === "income") income += tx.amount;
+      else if (tx.type === "expense") expense += tx.amount;
+    });
+    return { income, expense, profit: income - expense };
+  }, [filteredTransactions]);
+
+  const changeMonth = (offset: number) => {
+    const newDate = new Date(selectedDate);
+    newDate.setMonth(newDate.getMonth() + offset);
+    setSelectedDate(newDate);
+  };
+
   const openAddModal = () => {
-    setEditingTransaction(null);
-    setName("");
-    setAmount("");
-    setIsFixed(false);
-    setType("expense");
+    resetForm();
     setModalVisible(true);
   };
 
-  const openEditModal = (tx: any) => {
+  const openEditModal = (tx: Transaction) => {
     setEditingTransaction(tx);
-    setName(tx.name);
+    setDescription(tx.description);
     setAmount(tx.amount.toString());
     setIsFixed(!!tx.isFixed);
-    setType(tx.type === "income" ? "income" : "expense");
+    setType(tx.type);
+    setDate(tx.date);
+    setCategory(tx.category || "기타");
+    setAssetId(tx.assetId);
+    setToAssetId(tx.toAssetId);
     setModalVisible(true);
   };
 
   const handleSave = async () => {
-    if (!amount || !name) return;
+    if (!amount || !description) return;
     const numAmount = parseInt(amount.replace(/,/g, ""), 10);
     
     if (editingTransaction) {
-      await updateTransaction(editingTransaction.id, name, numAmount, type, isFixed);
+      await updateTransaction(
+        editingTransaction.id, 
+        description, 
+        numAmount, 
+        type, 
+        isFixed, 
+        date, 
+        category, 
+        assetId, 
+        toAssetId
+      );
     } else {
-      await addTransaction(name, numAmount, type, isFixed);
+      await addTransaction(
+        description, 
+        numAmount, 
+        type, 
+        isFixed, 
+        date, 
+        category, 
+        assetId, 
+        toAssetId
+      );
     }
     
     setModalVisible(false);
     resetForm();
-    loadData();
   };
 
   const resetForm = () => {
-    setName("");
+    setDescription("");
     setAmount("");
     setIsFixed(false);
     setType("expense");
+    setDate(new Date().toISOString().split("T")[0]);
+    setCategory("기타");
+    setAssetId(assets.length > 0 ? assets[0].id : undefined);
+    setToAssetId(undefined);
     setEditingTransaction(null);
   };
 
@@ -81,26 +155,55 @@ export default function FlowScreen() {
       await deleteTransaction(editingTransaction.id);
       setModalVisible(false);
       resetForm();
-      loadData();
     }
+  };
+
+  const getCategoryIcon = (catName: string) => {
+    const cat = CATEGORIES.find(c => c.id === catName);
+    return (cat?.icon || "ellipsis-horizontal") as any;
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
+      {/* Month Selector */}
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => changeMonth(-1)}>
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
+        </TouchableOpacity>
         <AppText style={[styles.title, { color: colors.text }]}>
-          가계부 (Flow)
+          {selectedDate.getFullYear()}년 {selectedDate.getMonth() + 1}월
         </AppText>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: colors.accent }]}
-          onPress={openAddModal}
-        >
-          <Ionicons name="add" size={24} color="#FFF" />
+        <TouchableOpacity onPress={() => changeMonth(1)}>
+          <Ionicons name="chevron-forward" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
 
+      {/* Summary Card */}
+      <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+        <View style={styles.summaryItem}>
+          <AppText style={styles.summaryLabel}>수입</AppText>
+          <AppText style={[styles.summaryValue, { color: colors.accent }]}>
+            ₩{formatNumber(monthSummary.income, 0)}
+          </AppText>
+        </View>
+        <View style={styles.summaryDivider} />
+        <View style={styles.summaryItem}>
+          <AppText style={styles.summaryLabel}>지출</AppText>
+          <AppText style={[styles.summaryValue, { color: colors.danger }]}>
+            ₩{formatNumber(monthSummary.expense, 0)}
+          </AppText>
+        </View>
+        <View style={styles.summaryDivider} />
+        <View style={styles.summaryItem}>
+          <AppText style={styles.summaryLabel}>순이익</AppText>
+          <AppText style={[styles.summaryValue, { color: colors.text }]}>
+            ₩{formatNumber(monthSummary.profit, 0)}
+          </AppText>
+        </View>
+      </View>
+
       <FlatList
-        data={[...transactions].reverse()}
+        data={filteredTransactions}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
@@ -111,9 +214,14 @@ export default function FlowScreen() {
             ]}
             onPress={() => openEditModal(item)}
           >
+            <View style={styles.txIconContainer}>
+              <View style={[styles.iconCircle, { backgroundColor: colors.bgSecondary }]}>
+                <Ionicons name={getCategoryIcon(item.category || "기타")} size={20} color={colors.textSecondary} />
+              </View>
+            </View>
             <View style={styles.txInfo}>
               <AppText style={[styles.txDescription, { color: colors.text }]}>
-                {item.name}
+                {item.description}
               </AppText>
               <AppText style={[styles.txDate, { color: colors.textMuted }]}>
                 {item.date} • {item.category || "미분류"}
@@ -133,34 +241,40 @@ export default function FlowScreen() {
                   styles.txAmount,
                   {
                     color:
-                      item.type === "expense" ? colors.danger : colors.accent,
+                      item.type === "expense" ? colors.danger : 
+                      item.type === "income" ? colors.accent : colors.textMuted,
                   },
                 ]}
               >
-                {item.type === "expense" ? "-" : "+"}
+                {item.type === "expense" ? "-" : item.type === "income" ? "+" : ""}
                 {formatNumber(item.amount, 0)}원
               </AppText>
             </View>
           </TouchableOpacity>
         )}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <AppText style={{ color: colors.textMuted }}>내역이 없습니다.</AppText>
+          </View>
+        }
       />
 
-      <Modal visible={modalVisible} animationType="fade" transparent>
-        <View style={[
-          styles.modalOverlay,
-          { backgroundColor: isDark ? "rgba(0,0,0,0.8)" : "rgba(0,0,0,0.4)" }
-        ]}>
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: colors.accent }]}
+        onPress={openAddModal}
+      >
+        <Ionicons name="add" size={32} color="#FFF" />
+      </TouchableOpacity>
+
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
           <View
             style={[
               styles.modalContent,
               { 
-                backgroundColor: isDark ? "#1a2235" : colors.card, 
+                backgroundColor: isDark ? "#1a2235" : "#fff", 
                 borderColor: colors.cardBorder,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 10 },
-                shadowOpacity: 0.3,
-                shadowRadius: 20,
-                elevation: 10
               },
             ]}
           >
@@ -168,117 +282,177 @@ export default function FlowScreen() {
               {editingTransaction ? "내역 수정" : "거래 추가"}
             </AppText>
 
-            <View style={styles.typeSelector}>
-              <TouchableOpacity
-                style={[
-                  styles.typeBtn,
-                  type === "expense" && { backgroundColor: colors.danger, borderColor: colors.danger },
-                  type !== "expense" && { borderColor: colors.cardBorder }
-                ]}
-                onPress={() => setType("expense")}
-              >
-                <AppText
-                  style={[
-                    styles.typeBtnText,
-                    { color: type === "expense" ? "#FFF" : colors.textMuted }
-                  ]}
-                >
-                  지출
-                </AppText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.typeBtn,
-                  type === "income" && { backgroundColor: colors.accent, borderColor: colors.accent },
-                  type !== "income" && { borderColor: colors.cardBorder }
-                ]}
-                onPress={() => setType("income")}
-              >
-                <AppText
-                  style={[
-                    styles.typeBtnText,
-                    { color: type === "income" ? "#FFF" : colors.textMuted }
-                  ]}
-                >
-                  수입
-                </AppText>
-              </TouchableOpacity>
-            </View>
-
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  color: colors.text,
-                  borderColor: colors.inputBorder,
-                  backgroundColor: colors.input,
-                },
-              ]}
-              placeholder="내역 (예: 점심 식사)"
-              placeholderTextColor={colors.textMuted}
-              value={name}
-              onChangeText={setName}
-            />
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  color: colors.text,
-                  borderColor: colors.inputBorder,
-                  backgroundColor: colors.input,
-                },
-              ]}
-              placeholder="금액"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="number-pad"
-              value={formatNumber(amount, 0)}
-              onChangeText={(text) => {
-                const numericValue = text.replace(/[^0-9]/g, "");
-                setAmount(numericValue);
-              }}
-            />
-
-            <View style={[styles.toggleRow, { backgroundColor: isDark ? colors.bgSecondary : "#f8f9fb" }]}>
-              <View>
-                <AppText style={[styles.toggleTitle, { color: colors.text }]}>
-                  고정 지출/수입으로 설정
-                </AppText>
-                <AppText style={[styles.toggleSub, { color: colors.textMuted }]}>
-                  매달 발생하는 정기적인 내역입니다
-                </AppText>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Type Selector */}
+              <View style={styles.typeSelector}>
+                {(["expense", "income", "transfer"] as const).map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[
+                      styles.typeBtn,
+                      type === t && { 
+                        backgroundColor: t === "expense" ? colors.danger : t === "income" ? colors.accent : colors.textSecondary,
+                        borderColor: t === "expense" ? colors.danger : t === "income" ? colors.accent : colors.textSecondary 
+                      },
+                      type !== t && { borderColor: colors.cardBorder }
+                    ]}
+                    onPress={() => setType(t)}
+                  >
+                    <AppText
+                      style={[
+                        styles.typeBtnText,
+                        { color: type === t ? "#FFF" : colors.textMuted }
+                      ]}
+                    >
+                      {t === "expense" ? "지출" : t === "income" ? "수입" : "이체"}
+                    </AppText>
+                  </TouchableOpacity>
+                ))}
               </View>
-              <Switch
-                value={isFixed}
-                onValueChange={setIsFixed}
-                trackColor={{ false: isDark ? "#333" : "#ddd", true: colors.accent }}
-                thumbColor={"#fff"}
-                ios_backgroundColor={isDark ? "#333" : "#ddd"}
-              />
-            </View>
 
-            <View style={styles.modalActions}>
-              {editingTransaction && (
-                <TouchableOpacity
-                  onPress={handleDelete}
-                  style={styles.deleteBtn}
-                >
-                  <AppText style={{ color: colors.danger, fontWeight: "600" }}>삭제</AppText>
-                </TouchableOpacity>
+              {/* Amount Input */}
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    color: colors.text,
+                    borderColor: colors.inputBorder,
+                    backgroundColor: colors.input,
+                    fontSize: 24,
+                    textAlign: "center",
+                    fontWeight: "800",
+                    height: 70
+                  },
+                ]}
+                placeholder="0"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="number-pad"
+                value={formatNumber(amount, 0)}
+                onChangeText={(text) => {
+                  const numericValue = text.replace(/[^0-9]/g, "");
+                  setAmount(numericValue);
+                }}
+              />
+
+              {/* Description Input */}
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    color: colors.text,
+                    borderColor: colors.inputBorder,
+                    backgroundColor: colors.input,
+                  },
+                ]}
+                placeholder="어디에 쓰셨나요?"
+                placeholderTextColor={colors.textMuted}
+                value={description}
+                onChangeText={setDescription}
+              />
+
+              {/* Asset Picker (Payment Method) */}
+              <AppText style={styles.sectionLabel}>결제 수단 / 자산</AppText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.assetScroll}>
+                {assets.map(asset => (
+                  <TouchableOpacity
+                    key={asset.id}
+                    style={[
+                      styles.assetBtn,
+                      assetId === asset.id && { backgroundColor: colors.accent, borderColor: colors.accent },
+                      assetId !== asset.id && { borderColor: colors.cardBorder, backgroundColor: colors.bgSecondary }
+                    ]}
+                    onPress={() => setAssetId(asset.id)}
+                  >
+                    <AppText style={{ color: assetId === asset.id ? "#FFF" : colors.text, fontWeight: "600" }}>{asset.name}</AppText>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {type === "transfer" && (
+                <>
+                  <AppText style={styles.sectionLabel}>받는 자산</AppText>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.assetScroll}>
+                    {assets.map(asset => (
+                      <TouchableOpacity
+                        key={asset.id}
+                        style={[
+                          styles.assetBtn,
+                          toAssetId === asset.id && { backgroundColor: colors.textSecondary, borderColor: colors.textSecondary },
+                          toAssetId !== asset.id && { borderColor: colors.cardBorder, backgroundColor: colors.bgSecondary }
+                        ]}
+                        onPress={() => setToAssetId(asset.id)}
+                      >
+                        <AppText style={{ color: toAssetId === asset.id ? "#FFF" : colors.text, fontWeight: "600" }}>{asset.name}</AppText>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </>
               )}
-              <View style={{ flex: 1 }} />
-              <TouchableOpacity
-                onPress={() => setModalVisible(false)}
-                style={styles.cancelBtn}
-              >
-                <AppText style={{ color: colors.textMuted }}>취소</AppText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleSave}
-                style={[styles.saveBtn, { backgroundColor: colors.accent }]}
-              >
-                <AppText style={{ color: "#FFF", fontWeight: "700" }}>저장</AppText>
-              </TouchableOpacity>
-            </View>
+
+              {/* Category Picker */}
+              <AppText style={styles.sectionLabel}>카테고리</AppText>
+              <View style={styles.categoryGrid}>
+                {CATEGORIES.map(cat => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[
+                      styles.catBtn,
+                      category === cat.id && { backgroundColor: colors.accentBg, borderColor: colors.accent },
+                      category !== cat.id && { borderColor: colors.cardBorder }
+                    ]}
+                    onPress={() => setCategory(cat.id)}
+                  >
+                    <Ionicons name={cat.icon as any} size={20} color={category === cat.id ? colors.accent : colors.textMuted} />
+                    <AppText style={[styles.catBtnText, { color: category === cat.id ? colors.accent : colors.textMuted }]}>{cat.id}</AppText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Date Input */}
+              <AppText style={styles.sectionLabel}>날짜</AppText>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    color: colors.text,
+                    borderColor: colors.inputBorder,
+                    backgroundColor: colors.input,
+                  },
+                ]}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={colors.textMuted}
+                value={date}
+                onChangeText={setDate}
+              />
+
+              <View style={[styles.toggleRow, { backgroundColor: isDark ? colors.bgSecondary : "#f8f9fb" }]}>
+                <View>
+                  <AppText style={[styles.toggleTitle, { color: colors.text }]}>고정 지출/수입 설정</AppText>
+                  <AppText style={[styles.toggleSub, { color: colors.textMuted }]}>매달 발생하는 정기 내역</AppText>
+                </View>
+                <Switch
+                  value={isFixed}
+                  onValueChange={setIsFixed}
+                  trackColor={{ false: isDark ? "#333" : "#ddd", true: colors.accent }}
+                  thumbColor={"#fff"}
+                />
+              </View>
+
+              <View style={styles.modalActions}>
+                {editingTransaction && (
+                  <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}>
+                    <AppText style={{ color: colors.danger, fontWeight: "600" }}>삭제</AppText>
+                  </TouchableOpacity>
+                )}
+                <View style={{ flex: 1 }} />
+                <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.cancelBtn}>
+                  <AppText style={{ color: colors.textMuted }}>취소</AppText>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSave} style={[styles.saveBtn, { backgroundColor: colors.accent }]}>
+                  <AppText style={{ color: "#FFF", fontWeight: "700" }}>저장</AppText>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -290,83 +464,131 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-  },
-  title: { fontSize: 24, fontWeight: "800" },
-  addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
+    padding: 20,
+    gap: 20
   },
-  list: { padding: 20 },
+  title: { fontSize: 20, fontWeight: "800" },
+  summaryCard: {
+    flexDirection: "row",
+    marginHorizontal: 20,
+    padding: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    justifyContent: "space-around",
+    alignItems: "center",
+    marginBottom: 20
+  },
+  summaryItem: { alignItems: "center" },
+  summaryLabel: { fontSize: 11, fontWeight: "600", color: "#888", marginBottom: 4 },
+  summaryValue: { fontSize: 16, fontWeight: "800" },
+  summaryDivider: { width: 1, height: 30, backgroundColor: "#eee" },
+  list: { padding: 20, paddingBottom: 100 },
   transactionItem: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 16,
-    borderRadius: 16,
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 20,
     marginBottom: 12,
     borderWidth: 1,
   },
+  txIconContainer: { marginRight: 14 },
+  iconCircle: { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center" },
   txInfo: { flex: 1 },
-  txDescription: { fontSize: 16, fontWeight: "600", marginBottom: 2 },
+  txDescription: { fontSize: 16, fontWeight: "700", marginBottom: 2 },
   txDate: { fontSize: 12 },
-  txAmountWrapper: { flexDirection: "row", alignItems: "center" },
-  txAmount: { fontSize: 16, fontWeight: "700" },
+  txAmountWrapper: { alignItems: "flex-end" },
+  txAmount: { fontSize: 16, fontWeight: "800" },
+  emptyContainer: { alignItems: "center", marginTop: 40 },
+  fab: {
+    position: "absolute",
+    right: 25,
+    bottom: 25,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8
+  },
   modalOverlay: {
     flex: 1,
-    justifyContent: "center",
-    padding: 20,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
   },
-  modalContent: { borderRadius: 32, padding: 28, borderWidth: 1 },
+  modalContent: { 
+    borderTopLeftRadius: 40, 
+    borderTopRightRadius: 40, 
+    padding: 28, 
+    maxHeight: "90%",
+    paddingBottom: 40
+  },
   modalTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "800",
     marginBottom: 24,
     textAlign: "center",
-    letterSpacing: -0.5,
   },
-  typeSelector: { flexDirection: "row", marginBottom: 20, gap: 12 },
+  typeSelector: { flexDirection: "row", marginBottom: 20, gap: 8 },
   typeBtn: {
     flex: 1,
-    padding: 14,
-    borderRadius: 16,
+    padding: 12,
+    borderRadius: 12,
     alignItems: "center",
-    backgroundColor: "transparent",
     borderWidth: 1.5,
   },
-  typeBtnText: { fontWeight: "700", fontSize: 15 },
+  typeBtnText: { fontWeight: "700", fontSize: 14 },
   input: {
-    height: 56,
+    height: 54,
     borderRadius: 16,
     borderWidth: 1,
     paddingHorizontal: 18,
-    marginBottom: 14,
+    marginBottom: 16,
     fontSize: 16,
   },
+  sectionLabel: { fontSize: 13, fontWeight: "700", color: "#888", marginBottom: 12, marginTop: 4 },
+  assetScroll: { marginBottom: 20 },
+  assetBtn: { 
+    paddingHorizontal: 16, 
+    paddingVertical: 10, 
+    borderRadius: 12, 
+    borderWidth: 1, 
+    marginRight: 10,
+    minWidth: 80,
+    alignItems: "center"
+  },
+  categoryGrid: { 
+    flexDirection: "row", 
+    flexWrap: "wrap", 
+    gap: 10, 
+    marginBottom: 24 
+  },
+  catBtn: {
+    width: "31%",
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: "center",
+    gap: 6
+  },
+  catBtnText: { fontSize: 12, fontWeight: "600" },
   toggleRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     padding: 16,
     borderRadius: 20,
-    marginBottom: 24,
-    marginTop: 8,
+    marginBottom: 30,
   },
-  toggleTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  toggleSub: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  modalActions: { flexDirection: "row", alignItems: "center" },
-  deleteBtn: { paddingVertical: 10, paddingHorizontal: 5 },
-  cancelBtn: { padding: 10, marginRight: 8 },
-  saveBtn: { paddingHorizontal: 28, paddingVertical: 14, borderRadius: 16 },
+  toggleTitle: { fontSize: 15, fontWeight: "700" },
+  toggleSub: { fontSize: 12 },
+  modalActions: { flexDirection: "row", alignItems: "center", gap: 10 },
+  deleteBtn: { padding: 12 },
+  cancelBtn: { padding: 12 },
+  saveBtn: { flex: 1, padding: 16, borderRadius: 18, alignItems: "center" },
 });

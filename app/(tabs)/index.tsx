@@ -220,7 +220,9 @@ export default function DashboardScreen() {
             </AppText>
             <AppText style={styles.title}>텅-장 시뮬레이터</AppText>
             <AppText style={styles.subTitle}>Tung-sim Live</AppText>
-            <AppText style={styles.slogan}>"지갑의 심박수를 느끼다"</AppText>
+            <AppText style={styles.slogan}>
+              "당신의 지갑이 비어가는 과정을 실시간으로 지켜보세요"
+            </AppText>
           </View>
           <View style={styles.unitSelectorContainer}>
             <View style={styles.unitSelector}>
@@ -312,16 +314,30 @@ export default function DashboardScreen() {
                   실시간 고정 지출 (Burn Rate)
                 </AppText>
                 <View style={styles.balanceSection}>
-                  <AppText style={[styles.negativeSign, { color: colors.danger }]}>
+                  <AppText
+                    style={[styles.negativeSign, { color: colors.danger }]}
+                  >
                     -
                   </AppText>
-                  <AppText style={[styles.currencySymbol, { color: colors.danger, opacity: 0.8 }]}>
+                  <AppText
+                    style={[
+                      styles.currencySymbol,
+                      { color: colors.danger, opacity: 0.8 },
+                    ]}
+                  >
                     ₩
                   </AppText>
-                  <AppText style={[styles.balanceInteger, { color: colors.danger }]}>
+                  <AppText
+                    style={[styles.balanceInteger, { color: colors.danger }]}
+                  >
                     {rateInteger}
                   </AppText>
-                  <AppText style={[styles.balanceDecimal, { color: colors.danger, opacity: 0.6 }]}>
+                  <AppText
+                    style={[
+                      styles.balanceDecimal,
+                      { color: colors.danger, opacity: 0.6 },
+                    ]}
+                  >
                     .{rateDecimal}
                   </AppText>
                 </View>
@@ -403,7 +419,9 @@ function AICard() {
         <AppText style={styles.planHighlight}>₩{formattedTotalLoss}</AppText>를
         손해 보는 셈이에요.{"\n\n"}• 이걸 만회하려면{" "}
         <AppText style={styles.planHighlight}>앞으로 30일 동안</AppText> 매일{" "}
-        <AppText style={styles.planHighlight}>₩{formattedRequiredDaily}</AppText>{" "}
+        <AppText style={styles.planHighlight}>
+          ₩{formattedRequiredDaily}
+        </AppText>{" "}
         이상은 더 벌거나 아껴야 해요.{"\n"}• AI의 족집게 제안:{" "}
         <AppText style={styles.planHighlight}>
           {strategies[aiStrategyIndex]}
@@ -443,8 +461,20 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
       letterSpacing: 0.6,
     },
     title: { color: c.text, fontSize: 24, fontWeight: "900", marginTop: 4 },
-    subTitle: { color: c.textSecondary, fontSize: 13, fontWeight: "600", marginTop: 2, letterSpacing: 1 },
-    slogan: { color: c.accent, fontSize: 11, fontWeight: "700", marginTop: 6, letterSpacing: 0.5 },
+    subTitle: {
+      color: c.textSecondary,
+      fontSize: 13,
+      fontWeight: "600",
+      marginTop: 2,
+      letterSpacing: 1,
+    },
+    slogan: {
+      color: c.accent,
+      fontSize: 11,
+      fontWeight: "700",
+      marginTop: 6,
+      letterSpacing: 0.5,
+    },
 
     mainEmphasis: {
       alignItems: "center",

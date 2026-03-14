@@ -46,18 +46,15 @@ export const initializeDB = async () => {
       
       if (tableInfo.length > 0) {
         const hasDescription = tableInfo.some((col) => col.name === "description");
-        const hasName = tableInfo.some((col) => col.name === "name");
-        const hasIsFixed = tableInfo.some((col) => col.name === "isFixed");
+        const hasAssetId = tableInfo.some((col) => col.name === "assetId");
+        const hasToAssetId = tableInfo.some((col) => col.name === "toAssetId");
 
-        // IF 'name' column exists or 'description' is missing, it's an old schema.
-        // We MUST migrate to avoid NOT NULL constraint errors on the hidden 'name' column.
-        if (hasName || !hasDescription || !hasIsFixed) {
-          console.log("Detected old transactions schema. Rebuilding table...");
+        // If missing modern fields, migrate
+        if (!hasAssetId || !hasToAssetId) {
+          console.log("Migrating transactions table to support asset linking and transfers...");
           
-          // Move existing data to backup
           await database.execAsync("ALTER TABLE transactions RENAME TO transactions_old;");
           
-          // Create new table with correct schema
           await database.execAsync(`
             CREATE TABLE transactions (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,25 +63,23 @@ export const initializeDB = async () => {
               type TEXT NOT NULL,
               date TEXT DEFAULT CURRENT_TIMESTAMP,
               category TEXT,
-              isFixed INTEGER DEFAULT 0
+              isFixed INTEGER DEFAULT 0,
+              assetId INTEGER,
+              toAssetId INTEGER
             );
           `);
 
-          // Restore data if possible
           try {
-            const sourceCol = hasName ? "name" : (hasDescription ? "description" : "'내역 없음'");
             await database.execAsync(`
               INSERT INTO transactions (id, description, amount, type, date, category, isFixed)
-              SELECT id, ${sourceCol}, amount, type, date, category, ${hasIsFixed ? "isFixed" : "0"}
+              SELECT id, description, amount, type, date, category, isFixed
               FROM transactions_old;
             `);
-            console.log("Data migrated successfully.");
-          } catch (migrationErr) {
-            console.warn("Could not migrate old data, starting fresh:", migrationErr);
+          } catch (e) {
+            console.warn("Migration copy failed, starting fresh transactions table", e);
           }
-
-          // Clean up
-          await database.execAsync("DROP TABLE transactions_old;");
+          
+          await database.execAsync("DROP TABLE IF EXISTS transactions_old;");
         }
       } else {
         // Create table for the first time
@@ -96,29 +91,14 @@ export const initializeDB = async () => {
             type TEXT NOT NULL,
             date TEXT DEFAULT CURRENT_TIMESTAMP,
             category TEXT,
-            isFixed INTEGER DEFAULT 0
+            isFixed INTEGER DEFAULT 0,
+            assetId INTEGER,
+            toAssetId INTEGER
           );
         `);
       }
     } catch (err) {
       console.error("Critical database error:", err);
-      // As a last resort, if schema is totally broken, wipe and start over (only for transactions)
-      try {
-        await database.execAsync("DROP TABLE IF EXISTS transactions;");
-        await database.execAsync(`
-          CREATE TABLE transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            description TEXT NOT NULL,
-            amount REAL NOT NULL,
-            type TEXT NOT NULL,
-            date TEXT DEFAULT CURRENT_TIMESTAMP,
-            category TEXT,
-            isFixed INTEGER DEFAULT 0
-          );
-        `);
-      } catch (e) {
-        console.error("Failed to recover database:", e);
-      }
     }
   })();
   
@@ -216,19 +196,26 @@ export const addTransaction = async (
   amount: number,
   type: string,
   isFixed: boolean = false,
+  date?: string,
+  category?: string,
+  assetId?: number,
+  toAssetId?: number
 ) => {
   await initializeDB();
   const database = await getDB();
   const statement = await database.prepareAsync(
-    "INSERT INTO transactions (description, amount, type, date, isFixed) VALUES ($desc, $amt, $type, $date, $fixed)",
+    "INSERT INTO transactions (description, amount, type, date, isFixed, category, assetId, toAssetId) VALUES ($desc, $amt, $type, $date, $fixed, $cat, $assetId, $toAssetId)",
   );
   try {
     const result = await statement.executeAsync({
       $desc: name,
       $amt: amount,
       $type: type,
-      $date: new Date().toISOString().split("T")[0],
+      $date: date || new Date().toISOString().split("T")[0],
       $fixed: isFixed ? 1 : 0,
+      $cat: category || "기타",
+      $assetId: assetId || null,
+      $toAssetId: toAssetId || null
     });
     return result.lastInsertRowId;
   } finally {
@@ -242,11 +229,15 @@ export const updateTransaction = async (
   amount: number,
   type: string,
   isFixed: boolean = false,
+  date?: string,
+  category?: string,
+  assetId?: number,
+  toAssetId?: number
 ) => {
   const database = await getDB();
   await database.runAsync(
-    "UPDATE transactions SET description = ?, amount = ?, type = ?, isFixed = ? WHERE id = ?",
-    [name, amount, type, isFixed ? 1 : 0, id],
+    "UPDATE transactions SET description = ?, amount = ?, type = ?, isFixed = ?, date = ?, category = ?, assetId = ?, toAssetId = ? WHERE id = ?",
+    [name, amount, type, isFixed ? 1 : 0, date || new Date().toISOString().split("T")[0], category || "기타", assetId || null, toAssetId || null, id],
   );
 };
 
@@ -263,13 +254,13 @@ export const loadDummyData = async () => {
     "DELETE FROM assets; DELETE FROM expenses; DELETE FROM transactions;",
   );
 
-  await addAsset("주거래 은행 (신한)", 8000000, "asset");
-  await addAsset("주식 계좌 (토스)", 5000000, "asset");
+  const shId = await addAsset("주거래 은행 (신한)", 8000000, "asset");
+  const tossId = await addAsset("주식 계좌 (토스)", 5000000, "asset");
   await addAsset("전세자금 대출", 50000000, "liability");
 
-  await addTransaction("맥도날드 점심", 12000, "expense", false);
-  await addTransaction("전세대출 이자", 200000, "expense", true);
-  await addTransaction("월급 입금", 3500000, "income", false);
-  await addTransaction("넷플릭스 구독", 17000, "expense", true);
-  await addTransaction("유튜브 프리미엄", 14900, "expense", true);
+  await addTransaction("맥도날드 점심", 12000, "expense", false, undefined, "식비", shId as number);
+  await addTransaction("전세대출 이자", 200000, "expense", true, undefined, "주거", shId as number);
+  await addTransaction("월급 입금", 3500000, "income", false, undefined, "수입", shId as number);
+  await addTransaction("넷플릭스 구독", 17000, "expense", true, undefined, "생활", tossId as number);
+  await addTransaction("유튜브 프리미엄", 14900, "expense", true, undefined, "생활", tossId as number);
 };

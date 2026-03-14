@@ -141,7 +141,7 @@ export default function SettingsScreen() {
         </View>
 
         <AppText style={styles.footerAppText}>
-          "지갑의 심박수를 느끼다"{"\n\n"}
+          "당신의 지갑이 비어가는 과정을 실시간으로 지켜보세요"{"\n\n"}
           텅-장 시뮬레이터: Tung-sim Live
         </AppText>
       </ScrollView>

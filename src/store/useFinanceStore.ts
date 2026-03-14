@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import {
   addAsset,
-  addTransaction,
+  addTransaction as dbAddTransaction,
   getAssets,
   getExpenses,
   getTransactions,
@@ -10,7 +10,7 @@ import {
   removeAsset,
   removeTransaction,
   updateAsset,
-  updateTransaction,
+  updateTransaction as dbUpdateTransaction,
 } from "../db/sqlite";
 
 export interface Asset {
@@ -29,12 +29,14 @@ export interface Expense {
 
 export interface Transaction {
   id: number;
-  name: string;
+  description: string;
   amount: number;
   date: string;
   type: "income" | "expense" | "transfer";
   category?: string;
   isFixed?: boolean;
+  assetId?: number;
+  toAssetId?: number;
 }
 
 interface FinanceState {
@@ -65,15 +67,23 @@ interface FinanceState {
   addTransaction: (
     name: string,
     amount: number,
-    type: "income" | "expense",
+    type: string,
     isFixed?: boolean,
+    date?: string,
+    category?: string,
+    assetId?: number,
+    toAssetId?: number
   ) => Promise<void>;
   updateTransaction: (
     id: number,
     name: string,
     amount: number,
-    type: "income" | "expense",
+    type: string,
     isFixed?: boolean,
+    date?: string,
+    category?: string,
+    assetId?: number,
+    toAssetId?: number
   ) => Promise<void>;
   deleteTransaction: (id: number) => Promise<void>;
   applyDummyData: () => Promise<void>;
@@ -124,31 +134,43 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await initializeDB();
     const assetsData = (await getAssets()) as Asset[];
     const expensesData = (await getExpenses()) as Expense[];
-    const transactionsData = (await getTransactions()) as Transaction[];
+    const transactionsData = (await getTransactions()) as any[];
 
-    const baseNetWorth = assetsData.reduce((total, asset) => {
+    // Only historical or today's transactions affect current asset balances
+    const today = new Date().toISOString().split("T")[0];
+    const effectiveTxs = transactionsData.filter(tx => tx.date <= today);
+
+    // Calculate current balances for each asset by applying transaction history to seed amounts
+    const updatedAssets = assetsData.map(asset => {
+      const balanceChange = effectiveTxs.reduce((change, tx) => {
+        if (tx.assetId === asset.id) {
+          if (tx.type === "income") return change + tx.amount;
+          if (tx.type === "expense") return change - tx.amount;
+          if (tx.type === "transfer") return change - tx.amount;
+        }
+        if (tx.toAssetId === asset.id) {
+          if (tx.type === "transfer") return change + tx.amount;
+        }
+        return change;
+      }, 0);
+      return { ...asset, amount: asset.amount + balanceChange };
+    });
+
+    const netWorth = updatedAssets.reduce((total, asset) => {
       return asset.type === "asset"
         ? total + asset.amount
         : total - asset.amount;
     }, 0);
 
-    // Sum up transactions (income - expense)
-    const txBalance = transactionsData.reduce((total, tx) => {
-      if (tx.type === "income") return total + tx.amount;
-      if (tx.type === "expense") return total - tx.amount;
-      return total;
-    }, 0);
-
-    const netWorth = baseNetWorth + txBalance;
     const rawDailyBurnRate = calculateDailyBurn(expensesData, transactionsData);
     const dailyBurnRate = Number(rawDailyBurnRate.toFixed(1));
     const perSecondBurnRate = rawDailyBurnRate / (24 * 60 * 60);
 
     set({
       isInitialized: true,
-      assets: assetsData,
+      assets: updatedAssets,
       expenses: expensesData,
-      transactions: transactionsData,
+      transactions: transactionsData as Transaction[],
       netWorth,
       dailyBurnRate,
       perSecondBurnRate,
@@ -170,13 +192,13 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await get().loadData();
   },
 
-  addTransaction: async (name, amount, type, isFixed) => {
-    await addTransaction(name, amount, type, isFixed);
+  addTransaction: async (name, amount, type, isFixed, date, category, assetId, toAssetId) => {
+    await dbAddTransaction(name, amount, type, isFixed, date, category, assetId, toAssetId);
     await get().loadData();
   },
 
-  updateTransaction: async (id, name, amount, type, isFixed) => {
-    await updateTransaction(id, name, amount, type, isFixed);
+  updateTransaction: async (id, name, amount, type, isFixed, date, category, assetId, toAssetId) => {
+    await dbUpdateTransaction(id, name, amount, type, isFixed, date, category, assetId, toAssetId);
     await get().loadData();
   },
 
