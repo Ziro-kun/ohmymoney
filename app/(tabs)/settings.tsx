@@ -42,11 +42,11 @@ export default function SettingsScreen() {
         <AppText style={[styles.title, { color: colors.text }]}>설정</AppText>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 }]}>
         <View
           style={[
             styles.section,
-            { backgroundColor: colors.card, borderColor: colors.cardBorder },
+            { backgroundColor: isDark ? "#121e33" : "#f1f5f9" },
           ]}
         >
           <AppText style={[styles.sectionTitle, { color: colors.textMuted }]}>
@@ -102,7 +102,7 @@ export default function SettingsScreen() {
         <View
           style={[
             styles.section,
-            { backgroundColor: colors.card, borderColor: colors.cardBorder },
+            { backgroundColor: isDark ? "#121e33" : "#f1f5f9" },
           ]}
         >
           <AppText style={[styles.sectionTitle, { color: colors.textMuted }]}>
@@ -159,7 +159,7 @@ const makeStyles = (c: AppColorScheme) =>
       borderRadius: 20,
       padding: 20,
       marginBottom: 20,
-      borderWidth: 1,
+      borderWidth: 0,
     },
     sectionTitle: {
       fontSize: 12,

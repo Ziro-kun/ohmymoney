@@ -361,7 +361,9 @@ const styles = StyleSheet.create({
     padding: 24,
     minHeight: "75%",
     maxHeight: "90%",
-    borderWidth: 1,
+    backgroundColor: isDark ? "#0d1a30" : "#ffffff",
+    borderWidth: 0,
+    paddingBottom: 40,
   },
   headerRow: {
     flexDirection: "row",
@@ -407,8 +409,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    borderWidth: 1,
     alignItems: "center",
+    backgroundColor: isDark ? "#1a2235" : "#f1f5f9",
+    borderWidth: 0,
   },
   catBtnText: {
     fontWeight: "700",
@@ -422,10 +425,11 @@ const styles = StyleSheet.create({
   input: {
     height: 54,
     borderRadius: 16,
-    borderWidth: 1,
     paddingHorizontal: 16,
     marginBottom: 24,
     fontSize: 16,
+    backgroundColor: isDark ? "#050a14" : "#f1f5f9",
+    borderWidth: 0,
   },
   toggleRow: {
     flexDirection: "row",
@@ -434,6 +438,7 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 16,
     marginBottom: 20,
+    backgroundColor: isDark ? "#1a2235" : "#f8fafc",
   },
   toggleTitle: { fontSize: 16, fontWeight: "700" },
   toggleSub: { fontSize: 13, marginTop: 4 },
@@ -442,15 +447,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 14,
-    borderWidth: 1,
     marginRight: 10,
     minWidth: 80,
-    alignItems: "center"
+    alignItems: "center",
+    backgroundColor: isDark ? "#1a2235" : "#f1f5f9",
+    borderWidth: 0,
   },
   summaryBox: {
     padding: 20,
     borderRadius: 20,
-    borderWidth: 1,
+    backgroundColor: isDark ? "#121e33" : "#f1f5f9",
+    borderWidth: 0,
   },
   summaryItem: {
     fontSize: 16,

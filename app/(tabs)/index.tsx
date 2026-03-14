@@ -550,7 +550,7 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
     },
     unitBtn: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 8 },
     unitBtnActive: {
-      backgroundColor: isDark ? c.accent : c.accentBg,
+      backgroundColor: isDark ? c.accent : "#e2e8f0",
     },
     unitBtnAppText: { color: c.textMuted, fontSize: 14, fontWeight: "600" },
     unitBtnAppTextActive: { color: c.accent },
@@ -604,7 +604,7 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
 
     // ── Stats Card ───────────────────────────────────────────
     statsCard: {
-      backgroundColor: c.card,
+      backgroundColor: isDark ? "#121e33" : "#f1f5f9",
       borderRadius: 24,
       padding: 20,
       shadowColor: isDark ? "#000" : c.danger,
@@ -612,6 +612,7 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
       shadowOpacity: 0.08,
       shadowRadius: 12,
       elevation: 2,
+      borderWidth: 0,
     },
     statRow: {
       flexDirection: "row",
@@ -625,7 +626,7 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
 
     // ── AI Card ──────────────────────────────────────────────
     aiCard: {
-      backgroundColor: c.purpleBg,
+      backgroundColor: isDark ? "#1a1625" : "#f5f3ff",
       borderRadius: 24,
       padding: 20,
       marginTop: 12,
@@ -634,6 +635,7 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
       shadowOpacity: 0.1,
       shadowRadius: 12,
       elevation: 2,
+      borderWidth: 0,
     },
     aiCardLabel: { color: c.purple, fontSize: 14, fontWeight: "600" },
     planAppText: {
