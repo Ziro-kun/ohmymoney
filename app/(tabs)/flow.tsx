@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
+  Alert,
   FlatList,
   LayoutAnimation,
   Modal,
@@ -64,6 +65,7 @@ export default function FlowScreen() {
   const [amount, setAmount] = useState("");
   const [isFixed, setIsFixed] = useState(false);
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [category, setCategory] = useState("기타");
   const [assetId, setAssetId] = useState<number | undefined>(undefined);
   const [toAssetId, setToAssetId] = useState<number | undefined>(undefined);
@@ -105,6 +107,10 @@ export default function FlowScreen() {
   };
 
   const openEditModal = (tx: Transaction) => {
+    if (tx.isVirtual) {
+      Alert.alert("정기 내역", "정기적으로 자동 생성된 내역은 직접 수정할 수 없습니다. 원본 내역을 수정해주세요.");
+      return;
+    }
     setEditingTransaction(tx);
     setDescription(tx.description);
     setAmount(tx.amount.toString());
@@ -115,47 +121,51 @@ export default function FlowScreen() {
     setAssetId(tx.assetId);
     setToAssetId(tx.toAssetId);
     setModalVisible(true);
+    setShowDatePicker(false);
   };
 
   const handleSave = async () => {
     if (!amount || !description) return;
     const numAmount = parseInt(amount.replace(/,/g, ""), 10);
-    
+    const numRecurringDay = isFixed ? parseInt(date.split("-")[2], 10) : null;
+
     if (editingTransaction) {
       await updateTransaction(
-        editingTransaction.id, 
-        description, 
-        numAmount, 
-        type, 
-        isFixed, 
-        date, 
-        category, 
-        assetId, 
-        toAssetId
+        editingTransaction.id,
+        description,
+        numAmount,
+        type,
+        isFixed,
+        date,
+        category,
+        assetId,
+        toAssetId,
+        numRecurringDay
       );
     } else {
       await addTransaction(
-        description, 
-        numAmount, 
-        type, 
-        isFixed, 
-        date, 
-        category, 
-        assetId, 
-        toAssetId
+        description,
+        numAmount,
+        type,
+        isFixed,
+        date,
+        category,
+        assetId,
+        toAssetId,
+        numRecurringDay
       );
     }
-    
+
     setModalVisible(false);
     resetForm();
   };
-
   const resetForm = () => {
     setDescription("");
     setAmount("");
     setIsFixed(false);
     setType("expense");
     setDate(new Date().toISOString().split("T")[0]);
+    setShowDatePicker(false);
     setCategory("기타");
     setAssetId(assets.length > 0 ? assets[0].id : undefined);
     setToAssetId(undefined);
@@ -494,22 +504,51 @@ export default function FlowScreen() {
 
               {/* Date Input */}
               <AppText style={[styles.sectionLabel, { color: colors.textMuted }]}>날짜</AppText>
-              <TextInput
+              <TouchableOpacity
+                onPress={() => setShowDatePicker(!showDatePicker)}
                 style={[
                   styles.input,
                   {
-                    color: colors.text,
                     borderColor: colors.inputBorder,
                     backgroundColor: colors.input,
+                    justifyContent: "center",
                   },
                 ]}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.textMuted}
-                value={date}
-                onChangeText={setDate}
-              />
+              >
+                <AppText style={{ color: colors.text }}>{date}</AppText>
+              </TouchableOpacity>
 
-              <View style={[styles.toggleRow, { backgroundColor: isDark ? colors.bgSecondary : "#f8f9fb" }]}>
+              {showDatePicker && (
+                <View style={{ marginTop: 10, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: colors.cardBorder }}>
+                  <Calendar
+                    current={date}
+                    onDayPress={(day: any) => {
+                      setDate(day.dateString);
+                      setShowDatePicker(false);
+                    }}
+                    theme={{
+                      backgroundColor: colors.input,
+                      calendarBackground: colors.input,
+                      textSectionTitleColor: colors.textMuted,
+                      selectedDayBackgroundColor: colors.accent,
+                      selectedDayTextColor: "#ffffff",
+                      todayTextColor: colors.accent,
+                      dayTextColor: colors.text,
+                      textDisabledColor: colors.textMuted,
+                      dotColor: colors.accent,
+                      selectedDotColor: "#ffffff",
+                      arrowColor: colors.text,
+                      monthTextColor: colors.text,
+                      indicatorColor: colors.accent,
+                    }}
+                    markedDates={{
+                      [date]: { selected: true, selectedColor: colors.accent }
+                    }}
+                  />
+                </View>
+              )}
+
+              <View style={[styles.toggleRow, { backgroundColor: isDark ? colors.bgSecondary : "#f8f9fb", marginTop: 15 }]}>
                 <View>
                   <AppText style={[styles.toggleTitle, { color: colors.text }]}>고정 지출/수입 설정</AppText>
                   <AppText style={[styles.toggleSub, { color: colors.textMuted }]}>매달 발생하는 정기 내역</AppText>
@@ -521,6 +560,14 @@ export default function FlowScreen() {
                   thumbColor={"#fff"}
                 />
               </View>
+
+              {isFixed && (
+                <View style={{ marginTop: 10, padding: 12, backgroundColor: isDark ? colors.bgSecondary : "#f8f9fb", borderRadius: 10 }}>
+                  <AppText style={{ color: colors.textMuted, fontSize: 13, lineHeight: 18 }}>
+                    지정한 날짜({parseInt(date.split("-")[2], 10)}일) 기준으로 매월 정기 반영됩니다. 날짜를 변경하시려면 위 달력에서 선택해주세요.
+                  </AppText>
+                </View>
+              )}
 
               <View style={styles.modalActions}>
                 {editingTransaction && (

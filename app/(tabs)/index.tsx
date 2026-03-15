@@ -428,7 +428,7 @@ export default function DashboardScreen() {
                 하루 고정 유지비 (Burn Rate)
               </AppText>
               <AppText style={[styles.statValue, { color: colors.danger }]}>
-                ₩{formatNumber(dailyBurnRate)}
+                ₩{formatNumber(Math.floor(dailyBurnRate), 0)}
               </AppText>
             </View>
             <AppText style={styles.statSubtext}>

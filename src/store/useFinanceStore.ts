@@ -11,6 +11,8 @@ import {
   removeTransaction,
   updateAsset,
   updateTransaction as dbUpdateTransaction,
+  getSetting,
+  updateSetting,
 } from "../db/sqlite";
 
 export interface Asset {
@@ -40,6 +42,8 @@ export interface Transaction {
   isFixed?: boolean;
   assetId?: number;
   toAssetId?: number;
+  recurringDay?: number | null;
+  isVirtual?: boolean;
 }
 
 interface FinanceState {
@@ -79,7 +83,8 @@ interface FinanceState {
     date?: string,
     category?: string,
     assetId?: number,
-    toAssetId?: number
+    toAssetId?: number,
+    recurringDay?: number | null
   ) => Promise<void>;
   updateTransaction: (
     id: number,
@@ -90,7 +95,8 @@ interface FinanceState {
     date?: string,
     category?: string,
     assetId?: number,
-    toAssetId?: number
+    toAssetId?: number,
+    recurringDay?: number | null
   ) => Promise<void>;
   deleteTransaction: (id: number) => Promise<void>;
   applyDummyData: () => Promise<void>;
@@ -126,6 +132,9 @@ interface FinanceState {
     targetAssetId: number,
     monthlyPayment: number
   ) => Promise<void>;
+  
+  autoGenerateVirtualTxs: boolean;
+  setAutoGenerateVirtualTxs: (val: boolean) => Promise<void>;
 }
 
 import { DAYS_IN_MONTH, DAYS_IN_YEAR } from "../../constants/finance";
@@ -136,38 +145,71 @@ const calculateDailyBurn = (
   transactions: Transaction[] = [],
   assets: Asset[] = []
 ) => {
+  // We use scaled integers (amount * 1000) for all burn calculations to prevent 
+  // floating point precision loss during micro-tick deductions in the UI.
+  const SCALE = 1000;
+
   // 1. Manual recurring expenses (from expenses table)
-  const expenseBurn = expenses.reduce((total, exp) => {
+  const expenseBurnScaled = expenses.reduce((total, exp) => {
     const amt = Number(exp.amount) || 0;
+    const scaledAmt = Math.round(amt * SCALE);
     switch (exp.frequency) {
-      case "daily": return total + amt;
-      case "weekly": return total + amt / 7;
-      case "monthly": return total + amt / DAYS_IN_MONTH;
-      case "yearly": return total + amt / DAYS_IN_YEAR;
+      case "daily": return total + scaledAmt;
+      case "weekly": return total + Math.round(scaledAmt / 7);
+      case "monthly": return total + Math.round(scaledAmt / DAYS_IN_MONTH);
+      case "yearly": return total + Math.round(scaledAmt / DAYS_IN_YEAR);
       default: return total;
     }
   }, 0);
 
   // 2. Fixed transactions (Repayments & Recurring Expenses)
-  const txBurn = transactions.reduce((total, tx) => {
+  const txBurnScaled = transactions.reduce((total, tx) => {
     const amt = Number(tx.amount) || 0;
-    // Count both fixed expenses and fixed transfers (like loan repayments)
-    if (tx.isFixed && (tx.type === "expense" || tx.type === "transfer")) {
-      return total + amt / DAYS_IN_MONTH;
+    const scaledAmt = Math.round(amt * SCALE);
+    if (tx.isFixed && !tx.isVirtual && (tx.type === "expense" || tx.type === "transfer")) {
+      return total + Math.round(scaledAmt / DAYS_IN_MONTH);
     }
     return total;
   }, 0);
 
-  // 3. Asset Depreciation (A real drop in Net Worth over time)
-  const depreciationBurn = assets.reduce((total, asset) => {
-    if (asset.type === "asset" && asset.assetCategory === "vehicle" && asset.depreciationRate) {
-      const annualDepreciation = (Number(asset.amount) || 0) * (Number(asset.depreciationRate) / 100);
-      return total + (annualDepreciation / DAYS_IN_YEAR);
+  // 3. Asset Depreciation & Liability Interest (A real drop in Net Worth over time)
+  // CRITICAL: The `assets` array passed here is `depreciatedAssets`, which contains the
+  // dynamically calculated real-time running balance (Seed +/- all transactions), NOT the static DB seed.
+  const depreciationBurnScaled = assets.reduce((total, asset) => {
+    const amt = Number(asset.amount) || 0;
+    const rate = Number(asset.depreciationRate) || 0;
+    const scaledAmt = Math.round(amt * SCALE);
+
+    if (asset.type === "asset" && asset.assetCategory === "vehicle" && rate) {
+      const annualDepreciation = scaledAmt * (rate / 100);
+      return total + Math.round(annualDepreciation / DAYS_IN_YEAR);
+    }
+    // For loans (liabilities), depreciationRate = annual interest rate.
+    // Uses real-time principal. Any repayment immediately lowers `amt`, instantly lowering the burn rate.
+    if (asset.type === "liability" && asset.assetCategory === "loan" && rate) {
+      const annualInterest = scaledAmt * (rate / 100);
+      return total + Math.round(annualInterest / DAYS_IN_YEAR);
     }
     return total;
   }, 0);
 
-  return expenseBurn + txBurn + depreciationBurn;
+  // 4. Recent Variable Expenses (Dynamic Weight)
+  // Sum of non-fixed expenses from the last 7 days averaged per day.
+  const todayStr = new Date().toISOString().split("T")[0];
+  const sevenDaysAgoDate = new Date();
+  sevenDaysAgoDate.setDate(sevenDaysAgoDate.getDate() - 7);
+  const sevenDaysAgoStr = sevenDaysAgoDate.toISOString().split("T")[0];
+
+  const recentVariableBurnScaled = transactions.reduce((total, tx) => {
+    if (!tx.isFixed && !tx.isVirtual && tx.type === "expense" && tx.date >= sevenDaysAgoStr && tx.date <= todayStr) {
+      const amt = Number(tx.amount) || 0;
+      const scaledAmt = Math.round(amt * SCALE);
+      return total + scaledAmt;
+    }
+    return total;
+  }, 0) / 7;
+
+  return (expenseBurnScaled + txBurnScaled + depreciationBurnScaled + Math.round(recentVariableBurnScaled)) / SCALE;
 };
 
 export const useFinanceStore = create<FinanceState>((set, get) => ({
@@ -178,16 +220,72 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   netWorth: 0,
   dailyBurnRate: 0,
   perSecondBurnRate: 0,
+  autoGenerateVirtualTxs: true,
+
+  setAutoGenerateVirtualTxs: async (val: boolean) => {
+    await updateSetting("autoGenerateVirtualTxs", val ? "true" : "false");
+    set({ autoGenerateVirtualTxs: val });
+    await get().loadData();
+  },
 
   loadData: async () => {
     await initializeDB();
+    const autoGenSetting = await getSetting("autoGenerateVirtualTxs", "true");
+    const autoGenerateVirtualTxs = autoGenSetting === "true";
+    
     const assetsData = (await getAssets()) as Asset[];
     const expensesData = (await getExpenses()) as Expense[];
-    const transactionsData = (await getTransactions()) as any[];
+    const rawTransactionsData = (await getTransactions()) as any[];
+
+    // Expand fixed transactions with recurringDay into virtual transactions
+    const transactionsData: any[] = [];
+    const todayStr = new Date().toISOString().split("T")[0];
+    const todayDate = new Date(todayStr);
+    const currentYear = todayDate.getFullYear();
+    const currentMonth = todayDate.getMonth();
+    const currentDay = todayDate.getDate();
+
+    for (const tx of rawTransactionsData) {
+      transactionsData.push(tx); // Include original
+
+      if (autoGenerateVirtualTxs && tx.isFixed && tx.recurringDay) {
+        const startDateStr = tx.date ? (tx.date.includes("T") ? tx.date.split("T")[0] : tx.date) : todayStr;
+        const startDate = new Date(startDateStr);
+        let year = startDate.getFullYear();
+        let month = startDate.getMonth() + 1; // Start checking from next month
+
+        while (year < currentYear || (year === currentYear && month <= currentMonth)) {
+          if (year === currentYear && month === currentMonth && currentDay < tx.recurringDay) {
+            break; // Not yet reached the recurring day this month
+          }
+
+          const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+          const actualDay = Math.min(tx.recurringDay, lastDayOfMonth);
+
+          const vDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(actualDay).padStart(2, '0')}`;
+          
+          transactionsData.push({
+            ...tx,
+            id: parseInt(`-1${tx.id}${year}${String(month + 1).padStart(2, '0')}`, 10), // Negative ID to mark as virtual
+            date: vDateStr,
+            description: `${tx.description} (정기)`,
+            isVirtual: true,
+          });
+
+          month++;
+          if (month > 11) {
+            month = 0;
+            year++;
+          }
+        }
+      }
+    }
+
+    // Sort all transactions by date descending
+    transactionsData.sort((a, b) => b.date.localeCompare(a.date));
 
     // Only historical or today's transactions affect current asset balances
-    const today = new Date().toISOString().split("T")[0];
-    const effectiveTxs = transactionsData.filter(tx => tx.date <= today);
+    const effectiveTxs = transactionsData.filter(tx => tx.date <= todayStr);
 
     // Calculate current balances for each asset by applying transaction history to seed amounts
     const updatedAssets = assetsData.map(asset => {
@@ -241,9 +339,15 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
         : total - amt;
     }, 0);
 
-    // CRITICAL: Pass updated assets to the calculator to include depreciation burn
+    // CRITICAL: Pass updated assets (which represent the running balance, not the DB seed) 
+    // to the calculator to compute the exact burn rate based on current reality.
     const rawDailyBurnRate = calculateDailyBurn(expensesData, transactionsData, depreciatedAssets);
+    
+    // dailyBurnRate is for display purposes, so rounding it to 1 decimal place is fine.
     const dailyBurnRate = Number(rawDailyBurnRate.toFixed(1));
+    
+    // perSecondBurnRate MUST be as precise as possible (retaining all decimals from scaled division)
+    // because it will be multiplied by elapsed milliseconds and subtracted from live balance in the UI tick.
     const perSecondBurnRate = rawDailyBurnRate / (24 * 60 * 60);
 
     set({
@@ -254,6 +358,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       netWorth,
       dailyBurnRate,
       perSecondBurnRate,
+      autoGenerateVirtualTxs,
     });
   },
 
@@ -272,13 +377,13 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await get().loadData();
   },
 
-  addTransaction: async (name, amount, type, isFixed, date, category, assetId, toAssetId) => {
-    await dbAddTransaction(name, amount, type, isFixed, date, category, assetId, toAssetId);
+  addTransaction: async (name, amount, type, isFixed, date, category, assetId, toAssetId, recurringDay) => {
+    await dbAddTransaction(name, amount, type, isFixed, date, category, assetId, toAssetId, recurringDay);
     await get().loadData();
   },
 
-  updateTransaction: async (id, name, amount, type, isFixed, date, category, assetId, toAssetId) => {
-    await dbUpdateTransaction(id, name, amount, type, isFixed, date, category, assetId, toAssetId);
+  updateTransaction: async (id, name, amount, type, isFixed, date, category, assetId, toAssetId, recurringDay) => {
+    await dbUpdateTransaction(id, name, amount, type, isFixed, date, category, assetId, toAssetId, recurringDay);
     await get().loadData();
   },
 

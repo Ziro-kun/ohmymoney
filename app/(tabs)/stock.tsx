@@ -71,7 +71,7 @@ export default function StockScreen() {
     if (!name || !amount) return;
     const numAmount = parseInt(amount.replace(/,/g, ""), 10);
     if (editingAsset) {
-      await updateAsset(editingAsset.id, name, numAmount, type);
+      await updateAsset(editingAsset.id, name, numAmount, type, editingAsset.assetCategory, editingAsset.depreciationRate);
     } else {
       await addAsset(name, numAmount, type);
     }

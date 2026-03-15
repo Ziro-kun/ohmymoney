@@ -315,18 +315,20 @@ export function LoanWizardModal({ visible, onClose }: LoanWizardModalProps) {
 
 const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
-  modalContent: { 
-    borderTopLeftRadius: 32, 
-    borderTopRightRadius: 32, 
-    padding: 24, 
-    minHeight: "65%", 
-    maxHeight: "90%", 
+  modalContent: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    minHeight: "65%",
+    maxHeight: "90%",
     borderWidth: 0,
     paddingBottom: 40,
     backgroundColor: isDark ? "#0d1a30" : "#ffffff",
   },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: "800" },
+  row: { flexDirection: "row", gap: 10, marginBottom: 24 },
+  infoBox: { backgroundColor: colors.bgSecondary, padding: 16, borderRadius: 16, flexDirection: 'row', gap: 10, alignItems: 'center' },
+  summaryBox: { backgroundColor: isDark ? colors.bgSecondary : "#f8f9fb", borderColor: colors.cardBorder, padding: 20, borderRadius: 20, borderWidth: 0 },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },  modalTitle: { fontSize: 20, fontWeight: "800" },
   stepIndicator: { flexDirection: "row", justifyContent: "center", gap: 8, marginBottom: 30 },
   stepDot: { width: 40, height: 6, borderRadius: 3 },
   scrollArea: { flex: 1, marginBottom: 20 },

@@ -4,6 +4,7 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
+  Switch,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -14,7 +15,7 @@ import { AppText } from "../../src/components/AppText";
 import { useFinanceStore } from "../../src/store/useFinanceStore";
 
 export default function SettingsScreen() {
-  const { loadData, applyDummyData } = useFinanceStore();
+  const { loadData, applyDummyData, autoGenerateVirtualTxs, setAutoGenerateVirtualTxs } = useFinanceStore();
   const { colors, isDark, toggleTheme } = useAppTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -52,6 +53,31 @@ export default function SettingsScreen() {
           <AppText style={[styles.sectionTitle, { color: colors.textMuted }]}>
             앱 설정
           </AppText>
+
+          <View style={[styles.menuItem, { paddingVertical: 12 }]}>
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: colors.accentBg },
+              ]}
+            >
+              <Ionicons name="calendar" size={20} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText style={[styles.menuLabel, { color: colors.text }]}>
+                정기 내역 자동 생성
+              </AppText>
+              <AppText style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
+                지정된 일자에 정기 지출/수입 내역을 가상으로 생성하여 자산에 반영합니다.
+              </AppText>
+            </View>
+            <Switch
+              value={autoGenerateVirtualTxs}
+              onValueChange={setAutoGenerateVirtualTxs}
+              trackColor={{ false: isDark ? "#333" : "#ddd", true: colors.accent }}
+              thumbColor={"#fff"}
+            />
+          </View>
 
           <TouchableOpacity style={styles.menuItem} onPress={toggleTheme}>
             <View

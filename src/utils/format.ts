@@ -1,6 +1,6 @@
 export const formatNumber = (
   val: string | number,
-  precision: number = 1,
+  precision: number = 0,
 ): string => {
   if (val === null || val === undefined || val === "") return "";
 
