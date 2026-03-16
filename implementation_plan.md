@@ -7,16 +7,13 @@
 
 ### 2.1 데이터 아키텍처 (Backend)
 - **Service**: `src/services/AnalysisService.ts`
-  - `getCategoryStats(period: 'weekly' | 'monthly' | 'yearly')`: 각 카테고리별 총합 및 비율 반환.
-  - `getTrendData(period: 'monthly' | 'yearly')`: 시간 흐름에 따른 순자산 및 번레이트 데이터 포인트 생성.
-- **DB Query**: SQLite의 `transactions` 테이블을 `date` 필드 기준으로 그룹화하여 집계.
+  - `getTrendData`: 기존 단일 합계 방식에서 `categories: { [cat: string]: number }[]` 형태로 월별 카테고리별 분절 데이터를 제공하도록 고도화.
 
 ### 2.2 UI/UX 디자인 (UI/UX)
-- **Layout**:
-  - 상단: 기간 필터 (Segmented Control / Tabs)
-  - 중앙 1: "어디에 가장 많이 썼나요?" (Pie Chart / Bar Chart)
-  - 중앙 2: "자산은 어떻게 변하고 있나요?" (Line Chart)
-  - 하단: 상위 5개 카테고리 리스트 (Icon, Category Name, Amount, Percentage)
+- **Category Visualization**: 가로 막대 그래프를 **Donut Chart**로 교체하여 한눈에 파악하기 쉽게 구현.
+  - 중앙에 총 지출액 표시 및 카테고리별 컬러 매칭.
+- **Trend Visualization**: 단순 막대에서 **Colored Multi-Bar Chart**로 교체.
+  - 각 막대 내에서 카테고리별 비중을 색상별로 적층(Stacked)하여 항목별 기여도를 시각화.
 - **Theme**: `useFinanceStore`의 테마 설정을 따르며, 차트 라이브러리에 테마 색상 주입.
 
 ### 2.3 프론트엔드 구현 (Frontend)

@@ -61,11 +61,17 @@ export const AnalysisService = {
     return stats.sort((a, b) => b.amount - a.amount);
   },
 
-  getTrendData: (transactions: Transaction[], assets: Asset[]): { labels: string[], netWorthPoints: number[], burnRatePoints: number[] } => {
+  getTrendData: (transactions: Transaction[], assets: Asset[]): { 
+    labels: string[], 
+    netWorthPoints: number[], 
+    burnRatePoints: number[],
+    categoryBreakdown: { [category: string]: number }[]
+  } => {
     // Last 6 months trend
     const months = [];
     const netWorthPoints = [];
     const burnRatePoints = [];
+    const categoryBreakdown: { [category: string]: number }[] = [];
     
     const today = new Date();
     
@@ -76,19 +82,22 @@ export const AnalysisService = {
       
       const monthStr = d.toISOString().substring(0, 7); // YYYY-MM
       
-      // Calculate monthly burn rate for this month
-      const monthExpenses = transactions.filter(tx => 
+      // Calculate monthly expenses per category
+      const monthTxs = transactions.filter(tx => 
         tx.type === 'expense' && tx.date.startsWith(monthStr) && !tx.isVirtual
-      ).reduce((sum, tx) => sum + tx.amount, 0);
+      );
+
+      const monthTotal = monthTxs.reduce((sum, tx) => sum + tx.amount, 0);
+      burnRatePoints.push(monthTotal);
+
+      const catMap: { [cat: string]: number } = {};
+      monthTxs.forEach(tx => {
+        const cat = tx.category || "기타";
+        catMap[cat] = (catMap[cat] || 0) + tx.amount;
+      });
+      categoryBreakdown.push(catMap);
       
-      burnRatePoints.push(monthExpenses);
-      
-      // Net Worth is complex to back-calculate perfectly without replaying, 
-      // but we can estimate by subtracting/adding transactions from current net worth.
-      // For the UI demonstration, we'll use a simplified model.
-      // In a real production app, we would store historical net worth snapshots.
-      
-      // Simplified simulation for the line chart:
+      // Simplified net worth simulation
       const randomVariance = (Math.random() - 0.5) * 500000;
       const baseNetWorth = assets.reduce((sum, a) => sum + (a.type === 'asset' ? a.amount : -a.amount), 0);
       netWorthPoints.push(Math.max(0, baseNetWorth - (i * 100000) + randomVariance));
@@ -98,6 +107,10 @@ export const AnalysisService = {
       labels: months,
       netWorthPoints,
       burnRatePoints,
+      categoryBreakdown
     };
+  },
+  getCategoryColor: (category: string): string => {
+    return CATEGORY_COLORS[category] || DEFAULT_COLOR;
   }
 };

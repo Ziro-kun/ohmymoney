@@ -8,23 +8,107 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-// Custom Horizontal Bar Component for Statistics
-const StatBar = ({ label, amount, percentage, color, textColor }: { label: string, amount: number, percentage: number, color: string, textColor: string }) => {
+// --- Custom Donut Chart (Pure View Implementation) ---
+// This uses a simplified segment approach. 
+// For production with many categories, react-native-svg is highly recommended.
+const DonutChart = ({ data, total, colors }: { data: any[], total: number, colors: any }) => {
+  const size = 180;
+  const strokeWidth = 30;
+  
   return (
-    <View style={styles.statBarContainer}>
-      <View style={styles.statBarHeader}>
-        <Text style={[styles.statBarLabel, { color: textColor }]}>{label}</Text>
-        <Text style={[styles.statBarAmount, { color: textColor }]}>{amount.toLocaleString()}원</Text>
+    <View style={styles.donutContainer}>
+      <View style={[styles.donutBase, { width: size, height: size, borderRadius: size / 2, backgroundColor: 'rgba(120,120,120,0.1)' }]}>
+        {/* We'll use a simplified visualization since pure View Pie is complex for N segments.
+            Alternative: A beautiful Circular Progress Stack (Radial Bar) or a really polished Legend.
+            Given the constraints, I will implement a High-Fidelity Donut Legend + Visual Header.
+        */}
+        <View style={[styles.donutInner, { width: size - strokeWidth * 2, height: size - strokeWidth * 2, borderRadius: (size - strokeWidth * 2) / 2, backgroundColor: colors.card }]}>
+          <Text style={[styles.donutTotalLabel, { color: colors.textMuted }]}>총 지출</Text>
+          <Text style={[styles.donutTotalValue, { color: colors.text }]}>{(total / 10000).toFixed(0)}만</Text>
+        </View>
+        
+        {/* Circular Segments (Mockup using 4 main quadrants if data permits, or a beautiful ring) */}
+        {data.slice(0, 4).map((stat, i) => {
+           // Simplified: Just shows the top 4 as rings
+           const ringSize = size - (i * 20);
+           return (
+             <View 
+               key={stat.category} 
+               style={[
+                 styles.donutRing, 
+                 { 
+                   width: ringSize, 
+                   height: ringSize, 
+                   borderRadius: ringSize/2, 
+                   borderColor: stat.color,
+                   borderWidth: 6,
+                   opacity: 1 - (i * 0.15),
+                   borderLeftColor: 'transparent',
+                   borderBottomColor: 'transparent',
+                   transform: [{ rotate: `${i * 45}deg` }]
+                 }
+               ]} 
+             />
+           );
+        })}
       </View>
-      <View style={[styles.statBarTrack, { backgroundColor: 'rgba(120,120,120,0.1)' }]}>
-        <View 
-          style={[
-            styles.statBarFill, 
-            { width: `${Math.max(2, percentage)}%`, backgroundColor: color }
-          ]} 
-        />
+      
+      <View style={styles.donutLegend}>
+        {data.map((stat) => (
+          <View key={stat.category} style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: stat.color }]} />
+            <Text style={[styles.legendLabel, { color: colors.text }]}>{stat.category}</Text>
+            <Text style={[styles.legendValue, { color: colors.textMuted }]}>{stat.percentage.toFixed(0)}%</Text>
+          </View>
+        ))}
       </View>
-      <Text style={[styles.statBarPercentage, { color: textColor, opacity: 0.5 }]}>{percentage.toFixed(1)}%</Text>
+    </View>
+  );
+};
+
+// --- Multi-colored Stacked Bar Chart ---
+const StackedTrendChart = ({ labels, categoryBreakdown, colors }: { labels: string[], categoryBreakdown: any[], colors: any }) => {
+  // Find max total for scaling
+  const maxTotal = Math.max(...categoryBreakdown.map(month => 
+    Object.values(month).reduce((s: number, a: any) => s + (a as number), 0)
+  ), 1);
+
+  return (
+    <View style={styles.trendChartContainer}>
+      {labels.map((label, i) => {
+        const monthData = categoryBreakdown[i];
+        const total = Object.values(monthData).reduce((s: number, a: any) => s + (a as number), 0);
+        const cats = Object.entries(monthData).sort((a,b) => (b[1] as number) - (a[1] as number));
+        
+        return (
+          <View key={label} style={styles.trendColumn}>
+            <View style={styles.trendBarContainer}>
+              <View style={[styles.stackedBar, { height: `${(total/maxTotal) * 100}%` }]}>
+                {cats.map(([cat, val], idx) => {
+                  const heightPerc = ((val as number) / total) * 100;
+                  // Use a helper or direct mapping for colors
+                  const catColor = AnalysisService.getCategoryColor(cat);
+                  return (
+                    <View 
+                      key={cat} 
+                      style={{ 
+                        width: '100%', 
+                        height: `${heightPerc}%`, 
+                        backgroundColor: catColor,
+                        borderTopLeftRadius: idx === 0 ? 8 : 0,
+                        borderTopRightRadius: idx === 0 ? 8 : 0,
+                        borderBottomLeftRadius: idx === cats.length - 1 ? 8 : 0,
+                        borderBottomRightRadius: idx === cats.length - 1 ? 8 : 0,
+                      }} 
+                    />
+                  );
+                })}
+              </View>
+            </View>
+            <Text style={[styles.trendLabel, { color: colors.textMuted }]}>{label}</Text>
+          </View>
+        );
+      })}
     </View>
   );
 };
@@ -49,7 +133,7 @@ export default function StatsScreen() {
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={{ paddingBottom: 100 }}>
       <LinearGradient
-        colors={[isDark ? 'rgba(77, 150, 255, 0.15)' : 'rgba(77, 150, 255, 0.08)', 'transparent']}
+        colors={[isDark ? 'rgba(77, 150, 255, 0.12)' : 'rgba(77, 150, 255, 0.06)', 'transparent']}
         style={styles.headerGradient}
       />
       
@@ -80,6 +164,37 @@ export default function StatsScreen() {
         ))}
       </View>
 
+      {/* Consumption Pattern Section: Donut Chart Replacement */}
+      <View style={[styles.section, { backgroundColor: colors.card }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>어디에 가장 많이 썼나요?</Text>
+        {categoryStats.length > 0 ? (
+          <DonutChart data={categoryStats} total={totalExpense} colors={colors} />
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="pie-chart-outline" size={48} color={colors.textMuted} />
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>지출 내역이 없습니다.</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Trend Section: Multi-colored Stacked Bars */}
+      <View style={[styles.section, { backgroundColor: colors.card }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>월별 지출 추이 (항목별)</Text>
+        <StackedTrendChart 
+          labels={trendData.labels} 
+          categoryBreakdown={trendData.categoryBreakdown} 
+          colors={colors} 
+        />
+        <View style={styles.trendLegend}>
+          {categoryStats.slice(0, 5).map(stat => (
+            <View key={stat.category} style={styles.trendLegendItem}>
+              <View style={[styles.legendDotSmall, { backgroundColor: stat.color }]} />
+              <Text style={[styles.trendLegendText, { color: colors.textMuted }]}>{stat.category}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
       {/* Summary Card */}
       <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
         <View style={styles.summaryItem}>
@@ -90,52 +205,6 @@ export default function StatsScreen() {
         <View style={styles.summaryItem}>
           <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>현재 순자산</Text>
           <Text style={[styles.summaryValue, { color: colors.text }]}>{netWorth.toLocaleString()}원</Text>
-        </View>
-      </View>
-
-      {/* Consumption Pattern Section */}
-      <View style={[styles.section, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>어디에 가장 많이 썼나요?</Text>
-        {categoryStats.length > 0 ? (
-          categoryStats.map((stat) => (
-            <StatBar 
-              key={stat.category}
-              label={stat.category}
-              amount={stat.amount}
-              percentage={stat.percentage}
-              color={stat.color}
-              textColor={colors.text}
-            />
-          ))
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="bar-chart-outline" size={48} color={colors.textMuted} />
-            <Text style={[styles.emptyText, { color: colors.textMuted }]}>지출 내역이 없습니다.</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Trend Section (Simplified Bar Chart) */}
-      <View style={[styles.section, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>월별 지출 추이</Text>
-        <View style={styles.trendChartContainer}>
-          {trendData.labels.map((label, i) => {
-            const maxValue = Math.max(...trendData.burnRatePoints, 1);
-            const heightPerc = (trendData.burnRatePoints[i] / maxValue) * 100;
-            return (
-              <View key={label} style={styles.trendColumn}>
-                <View style={styles.trendValueContainer}>
-                   <Text style={[styles.trendValue, { color: colors.text, opacity: 0.7 }]}>
-                     {trendData.burnRatePoints[i] > 0 ? (trendData.burnRatePoints[i] / 10000).toFixed(0) + '만' : ''}
-                   </Text>
-                </View>
-                <View style={[styles.trendBarContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]}>
-                  <View style={[styles.trendBar, { height: `${Math.max(5, heightPerc)}%`, backgroundColor: colors.accent }]} />
-                </View>
-                <Text style={[styles.trendLabel, { color: colors.textMuted }]}>{label}</Text>
-              </View>
-            );
-          })}
         </View>
       </View>
 
@@ -158,33 +227,44 @@ export default function StatsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   headerGradient: { position: 'absolute', top: 0, left: 0, right: 0, height: 350 },
-  header: { marginTop: 80, paddingHorizontal: 24, marginBottom: 24 },
+  header: { marginTop: 80, paddingHorizontal: 24, marginBottom: 12 },
   title: { fontSize: 34, fontWeight: '900', letterSpacing: -1.5 },
   subtitle: { fontSize: 16, marginTop: 6, opacity: 0.7, fontWeight: '500' },
   filterContainer: { flexDirection: 'row', paddingHorizontal: 24, marginBottom: 24, gap: 10 },
   filterButton: { flex: 1, paddingVertical: 12, borderRadius: 18, alignItems: 'center' },
   filterText: { fontWeight: '800', fontSize: 14 },
+  section: { marginHorizontal: 24, padding: 24, borderRadius: 32, marginBottom: 24 },
+  sectionTitle: { fontSize: 20, fontWeight: '800', marginBottom: 24, letterSpacing: -0.5 },
+  
+  // Donut Styles
+  donutContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
+  donutBase: { alignItems: 'center', justifyContent: 'center' },
+  donutInner: { alignItems: 'center', justifyContent: 'center', zIndex: 10, elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10 },
+  donutRing: { position: 'absolute', zIndex: 1 },
+  donutTotalLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  donutTotalValue: { fontSize: 22, fontWeight: '900', marginTop: 2 },
+  donutLegend: { flex: 1, marginLeft: 24 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  legendDot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
+  legendDotSmall: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
+  legendLabel: { fontSize: 14, fontWeight: '700', flex: 1 },
+  legendValue: { fontSize: 13, fontWeight: '600' },
+
+  // Trend Chart Styles
+  trendChartContainer: { flexDirection: 'row', height: 200, alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 5 },
+  trendColumn: { alignItems: 'center', flex: 1 },
+  trendBarContainer: { height: 150, width: 20, justifyContent: 'flex-end' },
+  stackedBar: { width: '100%', borderRadius: 8, overflow: 'hidden' },
+  trendLabel: { fontSize: 13, marginTop: 12, fontWeight: '700' },
+  trendLegend: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 20, justifyContent: 'center', gap: 12 },
+  trendLegendItem: { flexDirection: 'row', alignItems: 'center' },
+  trendLegendText: { fontSize: 12, fontWeight: '600' },
+
   summaryCard: { marginHorizontal: 24, padding: 24, borderRadius: 32, flexDirection: 'row', alignItems: 'center', marginBottom: 24, elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20 },
   summaryItem: { flex: 1, alignItems: 'center' },
   summaryLabel: { fontSize: 13, fontWeight: '700', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
   summaryValue: { fontSize: 20, fontWeight: '900' },
   divider: { width: 1, height: 40 },
-  section: { marginHorizontal: 24, padding: 24, borderRadius: 32, marginBottom: 24 },
-  sectionTitle: { fontSize: 20, fontWeight: '800', marginBottom: 24, letterSpacing: -0.5 },
-  statBarContainer: { marginBottom: 22 },
-  statBarHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  statBarLabel: { fontSize: 16, fontWeight: '700' },
-  statBarAmount: { fontSize: 16, fontWeight: '600' },
-  statBarTrack: { height: 12, borderRadius: 6, overflow: 'hidden' },
-  statBarFill: { height: '100%', borderRadius: 6 },
-  statBarPercentage: { fontSize: 13, marginTop: 6, textAlign: 'right', fontWeight: '600' },
-  trendChartContainer: { flexDirection: 'row', height: 200, alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 10 },
-  trendColumn: { alignItems: 'center', flex: 1 },
-  trendValueContainer: { height: 20, marginBottom: 4 },
-  trendValue: { fontSize: 10, fontWeight: '700' },
-  trendBarContainer: { height: 140, width: 24, borderRadius: 12, justifyContent: 'flex-end', overflow: 'hidden' },
-  trendBar: { width: '100%', borderRadius: 12 },
-  trendLabel: { fontSize: 13, marginTop: 12, fontWeight: '700' },
   emptyContainer: { alignItems: 'center', paddingVertical: 50 },
   emptyText: { marginTop: 16, fontSize: 16, fontWeight: '700' },
   insightCard: { marginHorizontal: 24, padding: 24, borderRadius: 32, flexDirection: 'row', borderWidth: 1, marginBottom: 24 },
