@@ -246,6 +246,7 @@ export default function FlowScreen() {
       {calendarExpanded && (
         <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
           <Calendar
+            key={isDark ? "dark-calendar-main" : "light-calendar-main"}
             current={`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`}
             onDayPress={onDayPress}
             onMonthChange={(month: any) => {
@@ -521,6 +522,7 @@ export default function FlowScreen() {
               {showDatePicker && (
                 <View style={{ marginTop: 10, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: colors.cardBorder }}>
                   <Calendar
+                    key={isDark ? "dark-calendar-modal" : "light-calendar-modal"}
                     current={date}
                     onDayPress={(day: any) => {
                       setDate(day.dateString);

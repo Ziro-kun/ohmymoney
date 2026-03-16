@@ -1,0 +1,1 @@
+console.log("If the user updates the 'Loan' asset from 50,000,000 to 80,000,000, how does the system know what the interest rate is to automatically calculate the new monthly repayment? Currently, 'assets' table doesn't have 'interestRate'. We need to add interestRate to assets (or loans), or we need to just ask the user for the interest rate when they edit a loan.");
