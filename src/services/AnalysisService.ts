@@ -18,7 +18,8 @@ const CATEGORY_COLORS: { [key: string]: string } = {
   "교통": "#4D96FF",
   "쇼핑": "#FFD93D",
   "주거": "#6BCB77",
-  "의료": "#9966FF",
+  "생활": "#A062D8",
+  "의료": "#1DD1A1",
   "교육": "#FF9F40",
   "자산취득": "#45826E",
   "수수료": "#8E8E93",
@@ -26,6 +27,19 @@ const CATEGORY_COLORS: { [key: string]: string } = {
 };
 
 const DEFAULT_COLOR = "#C9CBCF";
+const DYNAMIC_PALETTE = [
+  "#FF9F40", "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", 
+  "#9966FF", "#C9CBCF", "#FF5733", "#33FF57", "#3357FF"
+];
+
+const stringToColor = (str: string) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % DYNAMIC_PALETTE.length;
+  return DYNAMIC_PALETTE[index];
+};
 
 export const AnalysisService = {
   getCategoryStats: (transactions: Transaction[], period: 'weekly' | 'monthly' | 'yearly'): CategoryStat[] => {
@@ -39,7 +53,7 @@ export const AnalysisService = {
     const startDateStr = startDate.toISOString().split('T')[0];
 
     const expenses = transactions.filter(tx => 
-      tx.type === 'expense' && tx.date >= startDateStr && !tx.isVirtual
+      tx.type === 'expense' && tx.date >= startDateStr
     );
 
     const statsMap: { [key: string]: number } = {};
@@ -55,7 +69,7 @@ export const AnalysisService = {
       category: cat,
       amount: statsMap[cat],
       percentage: totalAmount > 0 ? (statsMap[cat] / totalAmount) * 100 : 0,
-      color: CATEGORY_COLORS[cat] || DEFAULT_COLOR
+      color: CATEGORY_COLORS[cat] || stringToColor(cat)
     }));
 
     return stats.sort((a, b) => b.amount - a.amount);
@@ -84,7 +98,7 @@ export const AnalysisService = {
       
       // Calculate monthly expenses per category
       const monthTxs = transactions.filter(tx => 
-        tx.type === 'expense' && tx.date.startsWith(monthStr) && !tx.isVirtual
+        tx.type === 'expense' && tx.date.startsWith(monthStr)
       );
 
       const monthTotal = monthTxs.reduce((sum, tx) => sum + tx.amount, 0);
@@ -111,6 +125,6 @@ export const AnalysisService = {
     };
   },
   getCategoryColor: (category: string): string => {
-    return CATEGORY_COLORS[category] || DEFAULT_COLOR;
+    return CATEGORY_COLORS[category] || stringToColor(category);
   }
 };

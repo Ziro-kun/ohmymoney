@@ -8,56 +8,86 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-// --- Custom Pie Chart (Pure View Implementation) ---
-const PieChart = ({ data, total, colors }: { data: any[], total: number, colors: any }) => {
-  const size = 180;
+// --- Premium Donut Chart (Pure View Implementation via Clipping) ---
+const Slice = ({ size, angle, rotation, color }: { size: number, angle: number, rotation: number, color: string }) => {
+  if (angle <= 0) return null;
   
+  // For angles > 180, we split into two segments
+  if (angle > 180) {
+    return (
+      <View style={StyleSheet.absoluteFill}>
+        <Slice size={size} angle={180} rotation={rotation} color={color} />
+        <Slice size={size} angle={angle - 180} rotation={rotation + 180} color={color} />
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.pieContainer}>
-      <View style={[styles.pieBase, { width: size, height: size, borderRadius: size / 2, backgroundColor: 'rgba(120,120,120,0.1)', overflow: 'hidden' }]}>
-        {/* Circular Segments (Mockup using segments) */}
-        {data.length > 0 ? (
-          data.slice(0, 5).map((stat, i) => {
-            // High-fidelity Pie Segment Representation
-            // Using a stack of semicircles with rotations
-            const rotation = data.slice(0, i).reduce((acc, curr) => acc + (curr.percentage * 3.6), 0);
-            const segmentAngle = stat.percentage * 3.6;
-            
-            return (
-              <View 
-                key={stat.category} 
-                style={[
-                  styles.pieSegment, 
-                  { 
-                    width: size, 
-                    height: size, 
-                    borderRadius: size/2, 
-                    backgroundColor: stat.color,
-                    position: 'absolute',
-                    opacity: 1 - (i * 0.05),
-                    transform: [
-                      { rotate: `${rotation}deg` },
-                      { scale: 1.1 } // Slighting overlap to prevent gaps
-                    ]
-                  }
-                ]} 
-              />
-            );
-          })
-        ) : (
-          <View style={[styles.pieInner, { width: size, height: size, borderRadius: size/2, backgroundColor: 'rgba(120,120,120,0.1)' }]} />
-        )}
-        
-        {/* Subtle Overlay to give it a "Pie" feel with segments if we can't do perfect masking */}
-        <View style={[styles.pieOverlay, { width: size, height: size, borderRadius: size/2, borderColor: colors.card, borderWidth: 2, position: 'absolute' }]} />
+    <View 
+      style={{
+        position: 'absolute',
+        width: size,
+        height: size,
+        transform: [{ rotate: `${rotation}deg` }],
+      }}
+    >
+      <View
+        style={{
+          width: size / 2,
+          height: size,
+          overflow: 'hidden',
+          left: size / 2,
+        }}
+      >
+        <View
+          style={{
+            width: size,
+            height: size,
+            left: -size / 2,
+            borderRadius: size / 2,
+            backgroundColor: color,
+            transform: [{ rotate: `${angle - 180}deg` }],
+          }}
+        />
+      </View>
+    </View>
+  );
+};
+
+const DonutChart = ({ data, total, colors }: { data: any[], total: number, colors: any }) => {
+  const size = 240; // Increased size for a more premium look
+  let currentRotation = 0;
+
+  return (
+    <View style={styles.donutContainer}>
+      <View style={[styles.donutInner, { width: size, height: size }]}>
+        {data.map((stat, i) => {
+          const angle = stat.percentage * 3.6;
+          const rotation = currentRotation;
+          currentRotation += angle;
+          return <Slice key={stat.category} size={size} angle={angle} rotation={rotation} color={stat.color} />;
+        })}
+        {/* Center Hole: Truly hollowed out by using main background color */}
+        <View style={[styles.donutHole, { backgroundColor: colors.bg }]}>
+          <Text style={[styles.donutTotalLabel, { color: colors.accent, fontWeight: '800' }]}>총 지출액</Text>
+          <Text style={[styles.donutTotalValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
+            {total.toLocaleString()}원
+          </Text>
+        </View>
       </View>
       
-      <View style={styles.pieLegend}>
+      {/* Legend with better spacing and contrast */}
+      <View style={styles.donutLegendBelow}>
         {data.map((stat) => (
-          <View key={stat.category} style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: stat.color }]} />
-            <Text style={[styles.legendLabel, { color: colors.text }]}>{stat.category}</Text>
-            <Text style={[styles.legendValue, { color: colors.textMuted }]}>{stat.percentage.toFixed(0)}%</Text>
+          <View key={stat.category} style={styles.legendRecord}>
+            <View style={styles.legendLeft}>
+              <View style={[styles.legendDot, { backgroundColor: stat.color }]} />
+              <Text style={[styles.legendLabelLarge, { color: colors.text }]}>{stat.category}</Text>
+            </View>
+            <View style={styles.legendRight}>
+              <Text style={[styles.legendAmountLarge, { color: colors.text }]}>{stat.amount.toLocaleString()}원</Text>
+              <Text style={[styles.legendPercLarge, { color: colors.textMuted }]}>{stat.percentage.toFixed(0)}%</Text>
+            </View>
           </View>
         ))}
       </View>
@@ -66,43 +96,47 @@ const PieChart = ({ data, total, colors }: { data: any[], total: number, colors:
 };
 
 // --- Multi-colored Stacked Bar Chart ---
-const StackedTrendChart = ({ labels, categoryBreakdown, colors }: { labels: string[], categoryBreakdown: any[], colors: any }) => {
-  // Find max total for scaling
-  const maxTotal = Math.max(...categoryBreakdown.map(month => 
-    Object.values(month).reduce((s: number, a: any) => s + (a as number), 0)
-  ), 1);
+const StackedTrendChart = ({ labels, categoryBreakdown, colors, isDark }: { labels: string[], categoryBreakdown: any[], colors: any, isDark: boolean }) => {
+  const maxTotal = useMemo(() => {
+    const totals = categoryBreakdown.map(month => 
+      Object.values(month).reduce((s: number, a: any) => s + (a as number), 0)
+    );
+    return Math.max(...totals, 1);
+  }, [categoryBreakdown]);
 
   return (
     <View style={styles.trendChartContainer}>
       {labels.map((label, i) => {
-        const monthData = categoryBreakdown[i];
+        const monthData = categoryBreakdown[i] || {};
         const total = Object.values(monthData).reduce((s: number, a: any) => s + (a as number), 0);
-        const cats = Object.entries(monthData).sort((a,b) => (b[1] as number) - (a[1] as number));
+        const cats = Object.entries(monthData)
+          .filter(([_, v]) => (v as number) > 0)
+          .sort((a,b) => (b[1] as number) - (a[1] as number));
         
+        const barHeight = (total / maxTotal) * 150;
+
         return (
-          <View key={label} style={styles.trendColumn}>
+          <View key={`${label}-${i}`} style={styles.trendColumn}>
             <View style={styles.trendBarContainer}>
-              <View style={[styles.stackedBar, { height: `${(total/maxTotal) * 100}%` }]}>
-                {cats.map(([cat, val], idx) => {
-                  const heightPerc = ((val as number) / total) * 100;
-                  // Use a helper or direct mapping for colors
-                  const catColor = AnalysisService.getCategoryColor(cat);
-                  return (
-                    <View 
-                      key={cat} 
-                      style={{ 
-                        width: '100%', 
-                        height: `${heightPerc}%`, 
-                        backgroundColor: catColor,
-                        borderTopLeftRadius: idx === 0 ? 8 : 0,
-                        borderTopRightRadius: idx === 0 ? 8 : 0,
-                        borderBottomLeftRadius: idx === cats.length - 1 ? 8 : 0,
-                        borderBottomRightRadius: idx === cats.length - 1 ? 8 : 0,
-                      }} 
-                    />
-                  );
-                })}
-              </View>
+              {total > 0 ? (
+                <View style={[styles.stackedBar, { height: Math.max(barHeight, 8), backgroundColor: colors.fg + '10' }]}>
+                  {cats.map(([cat, val]) => {
+                    const heightPerc = ((val as number) / total) * 100;
+                    return (
+                      <View 
+                        key={cat} 
+                        style={{ 
+                          width: '100%', 
+                          height: `${heightPerc}%`, 
+                          backgroundColor: AnalysisService.getCategoryColor(cat),
+                        }} 
+                      />
+                    );
+                  })}
+                </View>
+              ) : (
+                <View style={[styles.stackedBarEmpty, { height: 4, width: 12, borderRadius: 2, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]} />
+              )}
             </View>
             <Text style={[styles.trendLabel, { color: colors.textMuted }]}>{label}</Text>
           </View>
@@ -163,11 +197,11 @@ export default function StatsScreen() {
         ))}
       </View>
 
-      {/* Consumption Pattern Section: Pie Chart replacement */}
-      <View style={[styles.section, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>어디에 가장 많이 썼나요?</Text>
+      {/* Consumption Pattern Section: Donut Chart Hero */}
+      <View style={[styles.section, { backgroundColor: colors.card, alignItems: 'center' }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text, width: '100%' }]}>어디에 가장 많이 썼나요?</Text>
         {categoryStats.length > 0 ? (
-          <PieChart data={categoryStats} total={totalExpense} colors={colors} />
+          <DonutChart data={categoryStats} total={totalExpense} colors={colors} />
         ) : (
           <View style={styles.emptyContainer}>
             <Ionicons name="pie-chart-outline" size={48} color={colors.textMuted} />
@@ -183,6 +217,7 @@ export default function StatsScreen() {
           labels={trendData.labels} 
           categoryBreakdown={trendData.categoryBreakdown} 
           colors={colors} 
+          isDark={isDark}
         />
         <View style={styles.trendLegend}>
           {categoryStats.slice(0, 5).map(stat => (
@@ -235,28 +270,33 @@ const styles = StyleSheet.create({
   section: { marginHorizontal: 24, padding: 24, borderRadius: 32, marginBottom: 24 },
   sectionTitle: { fontSize: 20, fontWeight: '800', marginBottom: 24, letterSpacing: -0.5 },
   
-  // Pie Styles
-  pieContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
-  pieBase: { alignItems: 'center', justifyContent: 'center' },
-  pieSegment: { position: 'absolute' },
-  pieInner: { alignItems: 'center', justifyContent: 'center' },
-  pieOverlay: { zIndex: 20 },
-  pieLegend: { flex: 1, marginLeft: 24 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  legendDot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
-  legendDotSmall: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
-  legendLabel: { fontSize: 14, fontWeight: '700', flex: 1 },
-  legendValue: { fontSize: 13, fontWeight: '600' },
+  // Donut Chart Styles
+  donutContainer: { alignItems: 'center', width: '100%', marginVertical: 20 },
+  donutInner: { alignItems: 'center', justifyContent: 'center', marginBottom: 50 },
+  donutHole: { position: 'absolute', width: 170, height: 170, borderRadius: 85, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
+  donutTotalLabel: { fontSize: 13, marginBottom: 4, letterSpacing: -0.5, textTransform: 'uppercase' },
+  donutTotalValue: { fontSize: 26, fontWeight: '900', width: 150, textAlign: 'center', letterSpacing: -1.2 },
+  
+  donutLegendBelow: { width: '100%', gap: 14, marginTop: 10 },
+  legendRecord: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 },
+  legendLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  legendRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  legendDot: { width: 12, height: 12, borderRadius: 6 },
+  legendLabelLarge: { fontSize: 16, fontWeight: '700' },
+  legendAmountLarge: { fontSize: 16, fontWeight: '800' },
+  legendPercLarge: { fontSize: 14, fontWeight: '600', width: 40, textAlign: 'right' },
+  legendDotSmall: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
 
   // Trend Chart Styles
-  trendChartContainer: { flexDirection: 'row', height: 200, alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 5 },
+  trendChartContainer: { flexDirection: 'row', height: 200, alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 0 },
   trendColumn: { alignItems: 'center', flex: 1 },
-  trendBarContainer: { height: 150, width: 20, justifyContent: 'flex-end' },
-  stackedBar: { width: '100%', borderRadius: 8, overflow: 'hidden' },
-  trendLabel: { fontSize: 13, marginTop: 12, fontWeight: '700' },
-  trendLegend: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 20, justifyContent: 'center', gap: 12 },
+  trendBarContainer: { height: 150, width: '100%', justifyContent: 'flex-end', alignItems: 'center' },
+  stackedBar: { width: 18, borderRadius: 9, overflow: 'hidden' },
+  stackedBarEmpty: { width: 12, borderRadius: 2 },
+  trendLabel: { fontSize: 11, marginTop: 12, fontWeight: '700' },
+  trendLegend: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 32, justifyContent: 'center', gap: 16 },
   trendLegendItem: { flexDirection: 'row', alignItems: 'center' },
-  trendLegendText: { fontSize: 12, fontWeight: '600' },
+  trendLegendText: { fontSize: 12, fontWeight: '700' },
 
   summaryCard: { marginHorizontal: 24, padding: 24, borderRadius: 32, flexDirection: 'row', alignItems: 'center', marginBottom: 24, elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20 },
   summaryItem: { flex: 1, alignItems: 'center' },

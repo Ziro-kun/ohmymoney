@@ -157,12 +157,12 @@ export default function StockScreen() {
               style={[
                 styles.assetAmount,
                 {
-                  color: item.type === "asset" ? colors.accent : colors.danger,
+                  color: (item.type === "asset" ? item.amount >= 0 : item.amount <= 0) ? colors.accent : colors.danger,
                 },
               ]}
             >
-              {item.type === "liability" ? "-" : ""}
-              {formatNumber(item.amount, 0)}원
+              {item.type === "liability" ? (item.amount > 0 ? "-" : "+") : (item.amount < 0 ? "-" : "")}
+              {formatNumber(Math.abs(item.amount), 0)}원
             </AppText>
           </TouchableOpacity>
         )}
