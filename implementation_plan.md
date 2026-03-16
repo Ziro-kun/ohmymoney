@@ -1,21 +1,34 @@
-# Implementation Plan - Calendar Theme Synchronization Fix
+# 🏗 Implementation Plan: Statistics & Visualization Package
 
-## 1. Problem Description
-- 사용자가 다크모드/라이트모드 전환 시 `@flow` 화면의 달력 테마가 즉시 업데이트되지 않음.
-- 다른 화면을 갔다가 돌아오거나 새로고침해야 반영되는 현상 발생.
-- `react-native-calendars` 컴포넌트가 `theme` prop의 변경을 항상 감지하지 못하는 고유한 동작 방식 때문.
+## 1. 개요
+사용자의 소비 패턴을 직관적으로 이해할 수 있도록 `Statistics` 탭을 추가하고, 카테고리별 지출 비중과 자산 추이를 시각화합니다.
 
-## 2. Proposed Solution
-- `Calendar` 컴포넌트에 `key` 속성을 추가하여 테마(`isDark`) 변경 시 컴포넌트를 강제로 리마운트(Re-mount)하도록 함.
-- `key={isDark ? 'dark-calendar' : 'light-calendar'}` 패턴 적용.
+## 2. 상세 설계
 
-## 3. Implementation Steps
-1. `app/(tabs)/flow.tsx` 파일 내의 두 군데 `Calendar` 컴포넌트를 찾음.
-   - 메인 화면의 접이식 달력 (Line 248)
-   - 거래 추가/수정 모달 내의 날짜 선택 달력 (Line 523)
-2. 각 `Calendar` 컴포넌트에 `key={isDark ? 'dark-calendar' : 'light-calendar'}` 속성 추가.
-3. 테마 변경 시 달력이 즉시 리렌더링되는지 확인.
+### 2.1 데이터 아키텍처 (Backend)
+- **Service**: `src/services/AnalysisService.ts`
+  - `getCategoryStats(period: 'weekly' | 'monthly' | 'yearly')`: 각 카테고리별 총합 및 비율 반환.
+  - `getTrendData(period: 'monthly' | 'yearly')`: 시간 흐름에 따른 순자산 및 번레이트 데이터 포인트 생성.
+- **DB Query**: SQLite의 `transactions` 테이블을 `date` 필드 기준으로 그룹화하여 집계.
 
-## 4. Risks & Considerations
-- 리마운트 시 달력의 현재 펼쳐진 월(current month)이 유지되는지 확인 필요.
-- 성능 영향은 미미함 (테마 전환 시에만 1회 발생).
+### 2.2 UI/UX 디자인 (UI/UX)
+- **Layout**:
+  - 상단: 기간 필터 (Segmented Control / Tabs)
+  - 중앙 1: "어디에 가장 많이 썼나요?" (Pie Chart / Bar Chart)
+  - 중앙 2: "자산은 어떻게 변하고 있나요?" (Line Chart)
+  - 하단: 상위 5개 카테고리 리스트 (Icon, Category Name, Amount, Percentage)
+- **Theme**: `useFinanceStore`의 테마 설정을 따르며, 차트 라이브러리에 테마 색상 주입.
+
+### 2.3 프론트엔드 구현 (Frontend)
+- **Component**: `app/(tabs)/stats.tsx`
+- **Charting**: `react-native-chart-kit` 활용 (또는 경량화된 SVG 기반 차트).
+- **State Management**: `useFinanceStore`에서 트랜잭션 데이터를 가져와 `AnalysisService`로 가공하여 로컬 상태로 관리.
+
+## 3. 리스크 및 고려사항
+- **성능**: 트랜잭션 데이터가 많아질 경우 집계 속도 저하 우려 -> 메모이제이션(useMemo) 및 효율적인 SQL 쿼리 사용.
+- **라이브러리**: `react-native-chart-kit` 의존성 확인 및 폰트/레이아웃 호환성 체크.
+
+## 4. 완료 조건
+- [ ] 통계 탭이 하단 탭 메뉴에 정상 노출됨.
+- [ ] 기간 필터 변경 시 차트와 리스트가 즉시 업데이트됨.
+- [ ] 소비 패턴과 자산 추이가 시각적으로 명확하게 표현됨.

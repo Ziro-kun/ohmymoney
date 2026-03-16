@@ -1,1 +1,0 @@
-console.log("UI formatting is asked to: '소숫점한자리, 그 외에는 원단위 절사하는거 잊지 말고'. Let's check formatNumber function in src/utils/format.ts to make sure we aren't breaking existing UI, and let's check @app/(tabs)/index.tsx.");
