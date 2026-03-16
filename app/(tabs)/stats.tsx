@@ -8,52 +8,51 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-// --- Custom Donut Chart (Pure View Implementation) ---
-// This uses a simplified segment approach. 
-// For production with many categories, react-native-svg is highly recommended.
-const DonutChart = ({ data, total, colors }: { data: any[], total: number, colors: any }) => {
+// --- Custom Pie Chart (Pure View Implementation) ---
+const PieChart = ({ data, total, colors }: { data: any[], total: number, colors: any }) => {
   const size = 180;
-  const strokeWidth = 30;
   
   return (
-    <View style={styles.donutContainer}>
-      <View style={[styles.donutBase, { width: size, height: size, borderRadius: size / 2, backgroundColor: 'rgba(120,120,120,0.1)' }]}>
-        {/* We'll use a simplified visualization since pure View Pie is complex for N segments.
-            Alternative: A beautiful Circular Progress Stack (Radial Bar) or a really polished Legend.
-            Given the constraints, I will implement a High-Fidelity Donut Legend + Visual Header.
-        */}
-        <View style={[styles.donutInner, { width: size - strokeWidth * 2, height: size - strokeWidth * 2, borderRadius: (size - strokeWidth * 2) / 2, backgroundColor: colors.card }]}>
-          <Text style={[styles.donutTotalLabel, { color: colors.textMuted }]}>총 지출</Text>
-          <Text style={[styles.donutTotalValue, { color: colors.text }]}>{(total / 10000).toFixed(0)}만</Text>
-        </View>
+    <View style={styles.pieContainer}>
+      <View style={[styles.pieBase, { width: size, height: size, borderRadius: size / 2, backgroundColor: 'rgba(120,120,120,0.1)', overflow: 'hidden' }]}>
+        {/* Circular Segments (Mockup using segments) */}
+        {data.length > 0 ? (
+          data.slice(0, 5).map((stat, i) => {
+            // High-fidelity Pie Segment Representation
+            // Using a stack of semicircles with rotations
+            const rotation = data.slice(0, i).reduce((acc, curr) => acc + (curr.percentage * 3.6), 0);
+            const segmentAngle = stat.percentage * 3.6;
+            
+            return (
+              <View 
+                key={stat.category} 
+                style={[
+                  styles.pieSegment, 
+                  { 
+                    width: size, 
+                    height: size, 
+                    borderRadius: size/2, 
+                    backgroundColor: stat.color,
+                    position: 'absolute',
+                    opacity: 1 - (i * 0.05),
+                    transform: [
+                      { rotate: `${rotation}deg` },
+                      { scale: 1.1 } // Slighting overlap to prevent gaps
+                    ]
+                  }
+                ]} 
+              />
+            );
+          })
+        ) : (
+          <View style={[styles.pieInner, { width: size, height: size, borderRadius: size/2, backgroundColor: 'rgba(120,120,120,0.1)' }]} />
+        )}
         
-        {/* Circular Segments (Mockup using 4 main quadrants if data permits, or a beautiful ring) */}
-        {data.slice(0, 4).map((stat, i) => {
-           // Simplified: Just shows the top 4 as rings
-           const ringSize = size - (i * 20);
-           return (
-             <View 
-               key={stat.category} 
-               style={[
-                 styles.donutRing, 
-                 { 
-                   width: ringSize, 
-                   height: ringSize, 
-                   borderRadius: ringSize/2, 
-                   borderColor: stat.color,
-                   borderWidth: 6,
-                   opacity: 1 - (i * 0.15),
-                   borderLeftColor: 'transparent',
-                   borderBottomColor: 'transparent',
-                   transform: [{ rotate: `${i * 45}deg` }]
-                 }
-               ]} 
-             />
-           );
-        })}
+        {/* Subtle Overlay to give it a "Pie" feel with segments if we can't do perfect masking */}
+        <View style={[styles.pieOverlay, { width: size, height: size, borderRadius: size/2, borderColor: colors.card, borderWidth: 2, position: 'absolute' }]} />
       </View>
       
-      <View style={styles.donutLegend}>
+      <View style={styles.pieLegend}>
         {data.map((stat) => (
           <View key={stat.category} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: stat.color }]} />
@@ -164,11 +163,11 @@ export default function StatsScreen() {
         ))}
       </View>
 
-      {/* Consumption Pattern Section: Donut Chart Replacement */}
+      {/* Consumption Pattern Section: Pie Chart replacement */}
       <View style={[styles.section, { backgroundColor: colors.card }]}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>어디에 가장 많이 썼나요?</Text>
         {categoryStats.length > 0 ? (
-          <DonutChart data={categoryStats} total={totalExpense} colors={colors} />
+          <PieChart data={categoryStats} total={totalExpense} colors={colors} />
         ) : (
           <View style={styles.emptyContainer}>
             <Ionicons name="pie-chart-outline" size={48} color={colors.textMuted} />
@@ -236,14 +235,13 @@ const styles = StyleSheet.create({
   section: { marginHorizontal: 24, padding: 24, borderRadius: 32, marginBottom: 24 },
   sectionTitle: { fontSize: 20, fontWeight: '800', marginBottom: 24, letterSpacing: -0.5 },
   
-  // Donut Styles
-  donutContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
-  donutBase: { alignItems: 'center', justifyContent: 'center' },
-  donutInner: { alignItems: 'center', justifyContent: 'center', zIndex: 10, elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10 },
-  donutRing: { position: 'absolute', zIndex: 1 },
-  donutTotalLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  donutTotalValue: { fontSize: 22, fontWeight: '900', marginTop: 2 },
-  donutLegend: { flex: 1, marginLeft: 24 },
+  // Pie Styles
+  pieContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
+  pieBase: { alignItems: 'center', justifyContent: 'center' },
+  pieSegment: { position: 'absolute' },
+  pieInner: { alignItems: 'center', justifyContent: 'center' },
+  pieOverlay: { zIndex: 20 },
+  pieLegend: { flex: 1, marginLeft: 24 },
   legendItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   legendDot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
   legendDotSmall: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
