@@ -13,6 +13,7 @@ import {
   updateTransaction as dbUpdateTransaction,
   getSetting,
   updateSetting,
+  clearAllData as dbClearAllData,
 } from "../db/sqlite";
 
 export interface Asset {
@@ -145,6 +146,11 @@ interface FinanceState {
   setPinLength: (val: 4 | 6) => Promise<void>;
   isAppLocked: boolean;
   setAppLocked: (val: boolean) => void;
+  clearAllData: () => Promise<void>;
+  isColorBlindMode: boolean;
+  setColorBlindMode: (val: boolean) => Promise<void>;
+  isAutoDepreciationEnabled: boolean;
+  setAutoDepreciationEnabled: (val: boolean) => Promise<void>;
 }
 
 import { DAYS_IN_MONTH, DAYS_IN_YEAR } from "../../constants/finance";
@@ -232,6 +238,8 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   perSecondBurnRate: 0,
   autoGenerateVirtualTxs: true,
   isPrivacyMode: false,
+  isColorBlindMode: false,
+  isAutoDepreciationEnabled: true,
 
   setPrivacyMode: async (val: boolean) => {
     await updateSetting("isPrivacyMode", val ? "true" : "false");
@@ -240,6 +248,15 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   setAutoGenerateVirtualTxs: async (val: boolean) => {
     await updateSetting("autoGenerateVirtualTxs", val ? "true" : "false");
     set({ autoGenerateVirtualTxs: val });
+    await get().loadData();
+  },
+  setColorBlindMode: async (val: boolean) => {
+    await updateSetting("isColorBlindMode", val ? "true" : "false");
+    set({ isColorBlindMode: val });
+  },
+  setAutoDepreciationEnabled: async (val: boolean) => {
+    await updateSetting("isAutoDepreciationEnabled", val ? "true" : "false");
+    set({ isAutoDepreciationEnabled: val });
     await get().loadData();
   },
 
@@ -268,6 +285,10 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     const autoGenerateVirtualTxs = autoGenSetting === "true";
     const privacySetting = await getSetting("isPrivacyMode", "false");
     const isPrivacyMode = privacySetting === "true";
+    const colorBlindSetting = await getSetting("isColorBlindMode", "false");
+    const isColorBlindMode = colorBlindSetting === "true";
+    const autoDepreciationSetting = await getSetting("isAutoDepreciationEnabled", "true");
+    const isAutoDepreciationEnabled = autoDepreciationSetting === "true";
 
     const securityEnabledSetting = await getSetting("isSecurityEnabled", "false");
     const isSecurityEnabled = securityEnabledSetting === "true";
@@ -403,6 +424,8 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       perSecondBurnRate,
       autoGenerateVirtualTxs,
       isPrivacyMode,
+      isColorBlindMode,
+      isAutoDepreciationEnabled,
       isSecurityEnabled,
       isBiometricEnabled,
       pinLength,
@@ -441,6 +464,11 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   applyDummyData: async () => {
     await loadDummyData();
+    await get().loadData();
+  },
+
+  clearAllData: async () => {
+    await dbClearAllData();
     await get().loadData();
   },
 

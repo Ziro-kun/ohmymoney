@@ -338,3 +338,88 @@ export const loadDummyData = async () => {
   await addTransaction("아파트 관리비", 210000, "expense", true, "2024-01-01", "관리비/월세", shId as number, undefined, 10);
   await addTransaction("대출 원금 상환", 500000, "transfer", true, "2024-01-01", "대출상환", shId as number, creditId as number, 15);
 };
+
+// --- Data Management (Repository Pattern) ---
+
+/**
+ * Restore the entire database from a backup object.
+ */
+export const restoreDatabase = async (backupData: any) => {
+  const database = await getDB();
+  await database.execAsync("BEGIN TRANSACTION;");
+  try {
+    // Clear existing data
+    await database.execAsync("DELETE FROM assets;");
+    await database.execAsync("DELETE FROM expenses;");
+    await database.execAsync("DELETE FROM transactions;");
+    await database.execAsync("DELETE FROM settings;");
+
+    // Restore Assets
+    for (const asset of backupData.data.assets) {
+      await database.runAsync(
+        "INSERT INTO assets (id, name, amount, type, assetCategory, depreciationRate, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [asset.id, asset.name, asset.amount, asset.type, asset.assetCategory, asset.depreciationRate, asset.createdAt]
+      );
+    }
+
+    // Restore Expenses
+    for (const expense of backupData.data.expenses) {
+      await database.runAsync(
+        "INSERT INTO expenses (id, name, amount, frequency, createdAt) VALUES (?, ?, ?, ?, ?)",
+        [expense.id, expense.name, expense.amount, expense.frequency, expense.createdAt]
+      );
+    }
+
+    // Restore Transactions
+    for (const tx of backupData.data.transactions) {
+      await database.runAsync(
+        "INSERT INTO transactions (id, description, amount, type, date, category, isFixed, assetId, toAssetId, recurringDay) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [tx.id, tx.description, tx.amount, tx.type, tx.date, tx.category, tx.isFixed ? 1 : 0, tx.assetId, tx.toAssetId, tx.recurringDay]
+      );
+    }
+
+    // Restore Settings
+    for (const setting of backupData.data.settings) {
+      await database.runAsync(
+        "INSERT INTO settings (key, value) VALUES (?, ?)",
+        [setting.key, setting.value]
+      );
+    }
+
+    await database.execAsync("COMMIT;");
+  } catch (error) {
+    await database.execAsync("ROLLBACK;");
+    console.error("Database restoration failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Bulk import transactions into the database.
+ */
+export const importTransactions = async (transactions: any[]) => {
+  const database = await getDB();
+  await database.execAsync("BEGIN TRANSACTION;");
+  try {
+    for (const tx of transactions) {
+      await database.runAsync(
+        "INSERT INTO transactions (description, amount, type, date, category, isFixed, assetId, toAssetId, recurringDay) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [tx.description, tx.amount, tx.type, tx.date, tx.category, tx.isFixed, tx.assetId, tx.toAssetId, tx.recurringDay]
+      );
+    }
+    await database.execAsync("COMMIT;");
+  } catch (error) {
+    await database.execAsync("ROLLBACK;");
+    console.error("Bulk transaction import failed:", error);
+    throw error;
+  }
+};
+/**
+ * Clear all data from the database.
+ */
+export const clearAllData = async () => {
+  const database = await getDB();
+  await database.execAsync(
+    "DELETE FROM assets; DELETE FROM expenses; DELETE FROM transactions; DELETE FROM settings;"
+  );
+};

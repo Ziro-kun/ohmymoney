@@ -7,6 +7,7 @@ import {
   Dimensions,
   Vibration,
   Platform,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../../hooks/useAppTheme";
@@ -167,15 +168,18 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
     <Modal
       visible={isVisible}
       animationType="slide"
-      transparent={false}
+      transparent={true}
       onRequestClose={onClose}
     >
-      <View style={[styles.container, { backgroundColor: colors.bg }]}>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Ionicons name="close" size={28} color={colors.text} />
-        </TouchableOpacity>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback>
+            <View style={[styles.modalContent, { backgroundColor: colors.bg }]}>
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Ionicons name="close" size={28} color={colors.text} />
+              </TouchableOpacity>
 
-        <View style={styles.content}>
+              <View style={styles.content}>
           <AppText style={[styles.title, { color: colors.text }]}>
             {step === "enter"
               ? "신규 PIN 번호 입력"
@@ -230,19 +234,35 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
           </View>
         </View>
       </View>
+    </TouchableWithoutFeedback>
+  </View>
+</TouchableWithoutFeedback>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  modalOverlay: {
     flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
+  modalContent: {
+    width: width * 0.9,
+    paddingVertical: 40,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
   closeButton: {
     position: "absolute",
-    top: Platform.OS === "ios" ? 50 : 20,
+    top: 20,
     right: 20,
     zIndex: 10,
     padding: 10,
