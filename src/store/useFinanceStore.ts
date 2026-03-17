@@ -135,6 +135,16 @@ interface FinanceState {
   
   autoGenerateVirtualTxs: boolean;
   setAutoGenerateVirtualTxs: (val: boolean) => Promise<void>;
+  isPrivacyMode: boolean;
+  setPrivacyMode: (val: boolean) => Promise<void>;
+  isSecurityEnabled: boolean;
+  setSecurityEnabled: (val: boolean) => Promise<void>;
+  isBiometricEnabled: boolean;
+  setBiometricEnabled: (val: boolean) => Promise<void>;
+  pinLength: 4 | 6;
+  setPinLength: (val: 4 | 6) => Promise<void>;
+  isAppLocked: boolean;
+  setAppLocked: (val: boolean) => void;
 }
 
 import { DAYS_IN_MONTH, DAYS_IN_YEAR } from "../../constants/finance";
@@ -221,17 +231,50 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   dailyBurnRate: 0,
   perSecondBurnRate: 0,
   autoGenerateVirtualTxs: true,
+  isPrivacyMode: false,
 
+  setPrivacyMode: async (val: boolean) => {
+    await updateSetting("isPrivacyMode", val ? "true" : "false");
+    set({ isPrivacyMode: val });
+  },
   setAutoGenerateVirtualTxs: async (val: boolean) => {
     await updateSetting("autoGenerateVirtualTxs", val ? "true" : "false");
     set({ autoGenerateVirtualTxs: val });
     await get().loadData();
   },
 
+  isSecurityEnabled: false,
+  isBiometricEnabled: false,
+  pinLength: 4,
+  isAppLocked: true,
+
+  setSecurityEnabled: async (val: boolean) => {
+    await updateSetting("isSecurityEnabled", val ? "true" : "false");
+    set({ isSecurityEnabled: val });
+  },
+  setBiometricEnabled: async (val: boolean) => {
+    await updateSetting("isBiometricEnabled", val ? "true" : "false");
+    set({ isBiometricEnabled: val });
+  },
+  setPinLength: async (val: 4 | 6) => {
+    await updateSetting("pinLength", val.toString());
+    set({ pinLength: val });
+  },
+  setAppLocked: (val: boolean) => set({ isAppLocked: val }),
+
   loadData: async () => {
     await initializeDB();
     const autoGenSetting = await getSetting("autoGenerateVirtualTxs", "true");
     const autoGenerateVirtualTxs = autoGenSetting === "true";
+    const privacySetting = await getSetting("isPrivacyMode", "false");
+    const isPrivacyMode = privacySetting === "true";
+
+    const securityEnabledSetting = await getSetting("isSecurityEnabled", "false");
+    const isSecurityEnabled = securityEnabledSetting === "true";
+    const biometricEnabledSetting = await getSetting("isBiometricEnabled", "false");
+    const isBiometricEnabled = biometricEnabledSetting === "true";
+    const pinLengthSetting = await getSetting("pinLength", "4");
+    const pinLength = (pinLengthSetting === "6" ? 6 : 4) as 4 | 6;
     
     const assetsData = (await getAssets()) as Asset[];
     const expensesData = (await getExpenses()) as Expense[];
@@ -359,6 +402,10 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       dailyBurnRate,
       perSecondBurnRate,
       autoGenerateVirtualTxs,
+      isPrivacyMode,
+      isSecurityEnabled,
+      isBiometricEnabled,
+      pinLength,
     });
   },
 

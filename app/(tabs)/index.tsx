@@ -47,6 +47,7 @@ export default function DashboardScreen() {
     netWorth,
     perSecondBurnRate,
     dailyBurnRate,
+    isPrivacyMode,
   } = useFinanceStore();
   const { colors, isDark } = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -332,17 +333,19 @@ export default function DashboardScreen() {
                         { color: isDark ? colors.accent : colors.text },
                       ]}
                     >
-                      {integerPart}
+                      {isPrivacyMode ? "••••••" : integerPart}
                     </AppText>
-                    <AppText
-                      style={[
-                        styles.balanceDecimal,
-                        { color: isDark ? colors.accent : colors.textMuted },
-                        { opacity: 0.8 },
-                      ]}
-                    >
-                      .{decimalPart}
-                    </AppText>
+                    {!isPrivacyMode && (
+                      <AppText
+                        style={[
+                          styles.balanceDecimal,
+                          { color: isDark ? colors.accent : colors.textMuted },
+                          { opacity: 0.8 },
+                        ]}
+                      >
+                        .{decimalPart}
+                      </AppText>
+                    )}
                   </View>
                 </AnimatedRE.View>
 
@@ -390,16 +393,18 @@ export default function DashboardScreen() {
                     <AppText
                       style={[styles.balanceInteger, { color: colors.danger }]}
                     >
-                      {rateInteger}
+                      {isPrivacyMode ? "••••" : rateInteger}
                     </AppText>
-                    <AppText
-                      style={[
-                        styles.balanceDecimal,
-                        { color: colors.danger, opacity: 0.6 },
-                      ]}
-                    >
-                      .{rateDecimal}
-                    </AppText>
+                    {!isPrivacyMode && (
+                      <AppText
+                        style={[
+                          styles.balanceDecimal,
+                          { color: colors.danger, opacity: 0.6 },
+                        ]}
+                      >
+                        .{rateDecimal}
+                      </AppText>
+                    )}
                     <AppText
                       style={[
                         styles.emphasisUnitLabel,
@@ -428,7 +433,7 @@ export default function DashboardScreen() {
                 하루 고정 유지비 (Burn Rate)
               </AppText>
               <AppText style={[styles.statValue, { color: colors.danger }]}>
-                ₩{formatNumber(Math.floor(dailyBurnRate), 0)}
+                {isPrivacyMode ? "₩ •••,•••" : `₩${formatNumber(Math.floor(dailyBurnRate), 0)}`}
               </AppText>
             </View>
             <AppText style={styles.statSubtext}>
@@ -444,7 +449,7 @@ export default function DashboardScreen() {
 }
 
 function AICard() {
-  const { netWorth, dailyBurnRate } = useFinanceStore();
+  const { netWorth, dailyBurnRate, isPrivacyMode } = useFinanceStore();
   const { colors, isDark } = useAppTheme();
 
   const annualInterestRate = ANNUAL_INTEREST_RATE;
@@ -481,11 +486,11 @@ function AICard() {
       <AppText style={styles.planAppText}>
         이렇게 계속 돈이 나가면, 이 돈을 저축했을 때 벌 수 있었던 이자까지
         합쳐서 30일 동안 총{" "}
-        <AppText style={styles.planHighlight}>₩{formattedTotalLoss}</AppText>를
+        <AppText style={styles.planHighlight}>{isPrivacyMode ? "₩ •••,•••" : `₩${formattedTotalLoss}`}</AppText>를
         손해 보는 셈이에요.{"\n\n"}• 이걸 만회하려면{" "}
         <AppText style={styles.planHighlight}>앞으로 30일 동안</AppText> 매일{" "}
         <AppText style={styles.planHighlight}>
-          ₩{formattedRequiredDaily}
+          {isPrivacyMode ? "₩ •••,•••" : `₩${formattedRequiredDaily}`}
         </AppText>{" "}
         이상은 더 벌거나 아껴야 해요.{"\n"}• AI의 족집게 제안:{" "}
         <AppText style={styles.planHighlight}>

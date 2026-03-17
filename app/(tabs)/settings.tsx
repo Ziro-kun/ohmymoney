@@ -12,10 +12,24 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppColorScheme } from "../../constants/theme";
 import { useAppTheme } from "../../hooks/useAppTheme";
 import { AppText } from "../../src/components/AppText";
+import { SecurityService } from "../../src/services/SecurityService";
 import { useFinanceStore } from "../../src/store/useFinanceStore";
 
 export default function SettingsScreen() {
-  const { loadData, applyDummyData, autoGenerateVirtualTxs, setAutoGenerateVirtualTxs } = useFinanceStore();
+  const {
+    loadData,
+    applyDummyData,
+    autoGenerateVirtualTxs,
+    setAutoGenerateVirtualTxs,
+    isPrivacyMode,
+    setPrivacyMode,
+    isSecurityEnabled,
+    setSecurityEnabled,
+    isBiometricEnabled,
+    setBiometricEnabled,
+    pinLength,
+    setPinLength,
+  } = useFinanceStore();
   const { colors, isDark, toggleTheme } = useAppTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -35,6 +49,62 @@ export default function SettingsScreen() {
         },
       ],
     );
+  };
+
+  const handleToggleSecurity = async (value: boolean) => {
+    if (value) {
+      // Prompt for PIN length
+      Alert.alert(
+        "보안 설정",
+        "사용할 PIN 번호의 길이를 선택하세요.",
+        [
+          { text: "4자리", onPress: () => startPinSetup(4) },
+          { text: "6자리", onPress: () => startPinSetup(6) },
+          { text: "취소", style: "cancel" },
+        ]
+      );
+    } else {
+      await setSecurityEnabled(false);
+      await SecurityService.clearPIN();
+      Alert.alert("알림", "보안 잠금이 해제되었습니다.");
+    }
+  };
+
+  const startPinSetup = (length: number) => {
+    // In a real app, we'd navigate to a dedicated PIN setup screen.
+    // For now, we'll use a series of prompts for simplicity as a prototype.
+    Alert.prompt(
+      "PIN 등록",
+      `${length}자리 숫자를 입력하세요.`,
+      async (pin) => {
+        if (pin.length !== length || isNaN(Number(pin))) {
+          Alert.alert("오류", `${length}자리 숫자를 정확히 입력해주세요.`);
+          return;
+        }
+        
+        await SecurityService.savePIN(pin);
+        await setPinLength(length as 4 | 6);
+        await setSecurityEnabled(true);
+        Alert.alert("완료", "보안 잠금이 설정되었습니다.");
+      },
+      "secure-text"
+    );
+  };
+
+  const handleToggleBiometric = async (value: boolean) => {
+    if (value) {
+      const isAvailable = await SecurityService.isBiometricAvailable();
+      if (!isAvailable) {
+        Alert.alert("오류", "이 기기에서 사용할 수 있는 생체 인증 수단이 없습니다.");
+        return;
+      }
+      const success = await SecurityService.authenticateBiometric("생체 인증을 활성화합니다.");
+      if (success) {
+        await setBiometricEnabled(true);
+      }
+    } else {
+      await setBiometricEnabled(false);
+    }
   };
 
   return (
@@ -123,6 +193,122 @@ export default function SettingsScreen() {
               color={colors.textMuted}
             />
           </TouchableOpacity>
+        </View>
+
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: isDark ? "#121e33" : "#f1f5f9" },
+          ]}
+        >
+          <AppText style={[styles.sectionTitle, { color: colors.textMuted }]}>
+            보안 및 개인정보
+          </AppText>
+
+          {/* Security Master Toggle */}
+          <View style={[styles.menuItem, { paddingVertical: 12 }]}>
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: colors.accentBg },
+              ]}
+            >
+              <Ionicons name="lock-closed" size={20} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText style={[styles.menuLabel, { color: colors.text }]}>
+                앱 잠금 (PIN)
+              </AppText>
+              <AppText style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
+                앱 실행 시 PIN 번호 입력을 요청합니다.
+              </AppText>
+            </View>
+            <Switch
+              value={isSecurityEnabled}
+              onValueChange={handleToggleSecurity}
+              trackColor={{ false: isDark ? "#333" : "#ddd", true: colors.accent }}
+              thumbColor={"#fff"}
+            />
+          </View>
+
+          {/* Biometric Toggle */}
+          {isSecurityEnabled && (
+            <View style={[styles.menuItem, { paddingVertical: 12 }]}>
+              <View
+                style={[
+                  styles.iconContainer,
+                  { backgroundColor: colors.accentBg },
+                ]}
+              >
+                <Ionicons name="finger-print" size={20} color={colors.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppText style={[styles.menuLabel, { color: colors.text }]}>
+                  생체 인증 사용
+                </AppText>
+                <AppText style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
+                  FaceID / 지문 인식으로 잠금을 해제합니다.
+                </AppText>
+              </View>
+              <Switch
+                value={isBiometricEnabled}
+                onValueChange={handleToggleBiometric}
+                trackColor={{ false: isDark ? "#333" : "#ddd", true: colors.accent }}
+                thumbColor={"#fff"}
+              />
+            </View>
+          )}
+
+          {/* PIN Length Selection (Display only when enabled) */}
+          {isSecurityEnabled && (
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => handleToggleSecurity(true)}
+            >
+              <View
+                style={[
+                  styles.iconContainer,
+                  { backgroundColor: colors.accentBg },
+                ]}
+              >
+                <Ionicons name="keypad" size={20} color={colors.accent} />
+              </View>
+              <AppText style={[styles.menuLabel, { color: colors.text }]}>
+                PIN 번호 변경 ({pinLength}자리)
+              </AppText>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={colors.textMuted}
+              />
+            </TouchableOpacity>
+          )}
+
+          {/* Privacy Mode */}
+          <View style={[styles.menuItem, { paddingVertical: 12, marginBottom: 0 }]}>
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: colors.accentBg },
+              ]}
+            >
+              <Ionicons name="eye-off" size={20} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText style={[styles.menuLabel, { color: colors.text }]}>
+                개인정보 보호 모드
+              </AppText>
+              <AppText style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
+                메인 화면의 자산 금액을 마스킹 처리하여 숨깁니다.
+              </AppText>
+            </View>
+            <Switch
+              value={isPrivacyMode}
+              onValueChange={setPrivacyMode}
+              trackColor={{ false: isDark ? "#333" : "#ddd", true: colors.accent }}
+              thumbColor={"#fff"}
+            />
+          </View>
         </View>
 
         <View

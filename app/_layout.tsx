@@ -7,6 +7,7 @@ import * as SplashScreen from 'expo-splash-screen';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { CustomSplashScreen } from '../src/components/CustomSplashScreen';
+import { SecurityOverlay } from '../components/security/SecurityOverlay';
 
 // Prevent native splash screen from auto-hiding so we can transition smoothly
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -28,6 +29,9 @@ export default function RootLayout() {
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>
+      
+      {/* Security Overlay for app locking */}
+      <SecurityOverlay />
       
       {/* Our Custom Animated Splash Screen acts as an overlay */}
       {!appReady && <CustomSplashScreen onComplete={() => setAppReady(true)} />}
