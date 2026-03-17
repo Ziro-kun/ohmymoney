@@ -30,8 +30,7 @@ export const SecurityOverlay = () => {
   const [errorCount, setErrorCount] = useState(0);
   const [hint, setHint] = useState("PIN 번호를 입력하세요");
 
-  // Only show if security is enabled and app is locked
-  if (!isSecurityEnabled || !isAppLocked) return null;
+
 
   const handleBiometric = useCallback(async () => {
     if (isBiometricEnabled) {
@@ -97,6 +96,9 @@ export const SecurityOverlay = () => {
       {isIcon ? val : <Text style={[styles.keyText, { color: colors.text }]}>{val}</Text>}
     </TouchableOpacity>
   );
+
+  // Only show if security is enabled and app is locked
+  if (!isSecurityEnabled || !isAppLocked) return null;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
