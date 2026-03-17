@@ -72,7 +72,39 @@ const light: typeof dark = {
   separator: 'rgba(0,0,0,0.06)',
 };
 
-export const AppColors = { dark, light };
+// ─── Color-Blind Friendly Palettes ──────────────────────────────────────────
+// Replaces red/purple (problematic for red-green color blindness) with
+// orange/amber tones that are distinguishable alongside blues.
+
+const colorBlindDark: typeof dark = {
+  ...dark,
+  danger: '#f97316',
+  dangerBg: 'rgba(249,115,22,0.15)',
+  dangerBorder: 'rgba(249,115,22,0.35)',
+  purple: '#f59e0b',
+  purpleBg: 'rgba(245,158,11,0.08)',
+  purpleBorder: 'rgba(245,158,11,0.28)',
+  purpleText: '#fde68a',
+  liabilityRed: '#fb923c',
+  liabilityRedBg: 'rgba(251,146,60,0.12)',
+  expenseBg: 'rgba(249,115,22,0.1)',
+};
+
+const colorBlindLight: typeof dark = {
+  ...light,
+  danger: '#b84500',
+  dangerBg: 'rgba(184,69,0,0.08)',
+  dangerBorder: 'rgba(184,69,0,0.3)',
+  purple: '#a35c00',
+  purpleBg: 'rgba(163,92,0,0.07)',
+  purpleBorder: 'rgba(163,92,0,0.25)',
+  purpleText: '#7c3a00',
+  liabilityRed: '#b84500',
+  liabilityRedBg: 'rgba(184,69,0,0.09)',
+  expenseBg: 'rgba(184,69,0,0.07)',
+};
+
+export const AppColors = { dark, light, colorBlindDark, colorBlindLight };
 export type AppColorScheme = typeof dark;
 
 export const Colors = {

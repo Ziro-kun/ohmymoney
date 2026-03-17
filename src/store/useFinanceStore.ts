@@ -13,12 +13,14 @@ import {
   updateTransaction as dbUpdateTransaction,
   getSetting,
   updateSetting,
+  clearAllData as dbClearAllData,
 } from "../db/sqlite";
 
 export interface Asset {
   id: number;
   name: string;
   amount: number;
+  seedAmount?: number; // Original DB seed before transaction history is applied
   type: "asset" | "liability";
   assetCategory?: string;
   depreciationRate?: number;
@@ -135,6 +137,21 @@ interface FinanceState {
   
   autoGenerateVirtualTxs: boolean;
   setAutoGenerateVirtualTxs: (val: boolean) => Promise<void>;
+  isPrivacyMode: boolean;
+  setPrivacyMode: (val: boolean) => Promise<void>;
+  isSecurityEnabled: boolean;
+  setSecurityEnabled: (val: boolean) => Promise<void>;
+  isBiometricEnabled: boolean;
+  setBiometricEnabled: (val: boolean) => Promise<void>;
+  pinLength: 4 | 6;
+  setPinLength: (val: 4 | 6) => Promise<void>;
+  isAppLocked: boolean;
+  setAppLocked: (val: boolean) => void;
+  clearAllData: () => Promise<void>;
+  isColorBlindMode: boolean;
+  setColorBlindMode: (val: boolean) => Promise<void>;
+  isAutoDepreciationEnabled: boolean;
+  setAutoDepreciationEnabled: (val: boolean) => Promise<void>;
 }
 
 import { DAYS_IN_MONTH, DAYS_IN_YEAR } from "../../constants/finance";
@@ -221,19 +238,69 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   dailyBurnRate: 0,
   perSecondBurnRate: 0,
   autoGenerateVirtualTxs: true,
+  isPrivacyMode: false,
+  isColorBlindMode: false,
+  isAutoDepreciationEnabled: true,
 
+  setPrivacyMode: async (val: boolean) => {
+    await updateSetting("isPrivacyMode", val ? "true" : "false");
+    set({ isPrivacyMode: val });
+  },
   setAutoGenerateVirtualTxs: async (val: boolean) => {
     await updateSetting("autoGenerateVirtualTxs", val ? "true" : "false");
     set({ autoGenerateVirtualTxs: val });
     await get().loadData();
   },
+  setColorBlindMode: async (val: boolean) => {
+    await updateSetting("isColorBlindMode", val ? "true" : "false");
+    set({ isColorBlindMode: val });
+  },
+  setAutoDepreciationEnabled: async (val: boolean) => {
+    await updateSetting("isAutoDepreciationEnabled", val ? "true" : "false");
+    set({ isAutoDepreciationEnabled: val });
+    await get().loadData();
+  },
+
+  isSecurityEnabled: false,
+  isBiometricEnabled: false,
+  pinLength: 4,
+  isAppLocked: true,
+
+  setSecurityEnabled: async (val: boolean) => {
+    await updateSetting("isSecurityEnabled", val ? "true" : "false");
+    set({ isSecurityEnabled: val });
+  },
+  setBiometricEnabled: async (val: boolean) => {
+    await updateSetting("isBiometricEnabled", val ? "true" : "false");
+    set({ isBiometricEnabled: val });
+  },
+  setPinLength: async (val: 4 | 6) => {
+    await updateSetting("pinLength", val.toString());
+    set({ pinLength: val });
+  },
+  setAppLocked: (val: boolean) => set({ isAppLocked: val }),
 
   loadData: async () => {
     await initializeDB();
     const autoGenSetting = await getSetting("autoGenerateVirtualTxs", "true");
     const autoGenerateVirtualTxs = autoGenSetting === "true";
+    const privacySetting = await getSetting("isPrivacyMode", "false");
+    const isPrivacyMode = privacySetting === "true";
+    const colorBlindSetting = await getSetting("isColorBlindMode", "false");
+    const isColorBlindMode = colorBlindSetting === "true";
+    const autoDepreciationSetting = await getSetting("isAutoDepreciationEnabled", "true");
+    const isAutoDepreciationEnabled = autoDepreciationSetting === "true";
+
+    const securityEnabledSetting = await getSetting("isSecurityEnabled", "false");
+    const isSecurityEnabled = securityEnabledSetting === "true";
+    const biometricEnabledSetting = await getSetting("isBiometricEnabled", "false");
+    const isBiometricEnabled = biometricEnabledSetting === "true";
+    const pinLengthSetting = await getSetting("pinLength", "4");
+    const pinLength = (pinLengthSetting === "6" ? 6 : 4) as 4 | 6;
     
-    const assetsData = (await getAssets()) as Asset[];
+    const rawAssetsData = (await getAssets()) as Asset[];
+    // Preserve DB seed amounts before transaction history is applied
+    const assetsData: Asset[] = rawAssetsData.map(a => ({ ...a, seedAmount: a.amount }));
     const expensesData = (await getExpenses()) as Expense[];
     const rawTransactionsData = (await getTransactions()) as any[];
 
@@ -359,6 +426,12 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       dailyBurnRate,
       perSecondBurnRate,
       autoGenerateVirtualTxs,
+      isPrivacyMode,
+      isColorBlindMode,
+      isAutoDepreciationEnabled,
+      isSecurityEnabled,
+      isBiometricEnabled,
+      pinLength,
     });
   },
 
@@ -394,6 +467,11 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   applyDummyData: async () => {
     await loadDummyData();
+    await get().loadData();
+  },
+
+  clearAllData: async () => {
+    await dbClearAllData();
     await get().loadData();
   },
 

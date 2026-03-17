@@ -19,6 +19,7 @@ import { useAppTheme } from "../../hooks/useAppTheme";
 import { useFinanceStore, Transaction, Asset } from "../../src/store/useFinanceStore";
 import { AppText } from "../../src/components/AppText";
 import { formatNumber } from "../../src/utils/format";
+import { CATEGORY_CATALOG, CategoryGroup, TransactionType } from "../../src/constants/categories";
 
 LocaleConfig.locales["ko"] = {
   monthNames: ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"],
@@ -29,18 +30,8 @@ LocaleConfig.locales["ko"] = {
 };
 LocaleConfig.defaultLocale = "ko";
 
-const CATEGORIES = [
-  { id: "식비", icon: "fast-food" },
-  { id: "교통", icon: "bus" },
-  { id: "쇼핑", icon: "cart" },
-  { id: "의료", icon: "medkit" },
-  { id: "주거", icon: "home" },
-  { id: "생활", icon: "shirt" },
-  { id: "문화", icon: "film" },
-  { id: "수입", icon: "cash" },
-  { id: "이체", icon: "swap-horizontal" },
-  { id: "기타", icon: "ellipsis-horizontal" },
-];
+// DEPRECATED: Using CATEGORY_CATALOG from constants/categories.ts instead
+const OLD_CATEGORIES_DO_NOT_USE = [];
 
 export default function FlowScreen() {
   const { colors, isDark } = useAppTheme();
@@ -67,6 +58,7 @@ export default function FlowScreen() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [category, setCategory] = useState("기타");
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [assetId, setAssetId] = useState<number | undefined>(undefined);
   const [toAssetId, setToAssetId] = useState<number | undefined>(undefined);
 
@@ -108,7 +100,25 @@ export default function FlowScreen() {
 
   const openEditModal = (tx: Transaction) => {
     if (tx.isVirtual) {
-      Alert.alert("정기 내역", "정기적으로 자동 생성된 내역은 직접 수정할 수 없습니다. 원본 내역을 수정해주세요.");
+      // Find the original (non-virtual, isFixed) transaction by matching description
+      const originalDescription = tx.description.endsWith(" (정기)")
+        ? tx.description.slice(0, -5)
+        : tx.description;
+      const original = transactions.find(
+        t => !t.isVirtual && t.isFixed && t.description === originalDescription && t.amount === tx.amount
+      );
+      if (original) {
+        Alert.alert(
+          "정기 내역",
+          "자동 생성된 정기 내역입니다. 원본 내역을 수정하시겠습니까?",
+          [
+            { text: "취소", style: "cancel" },
+            { text: "원본 수정", onPress: () => openEditModal(original) },
+          ]
+        );
+      } else {
+        Alert.alert("정기 내역", "자동 생성된 내역은 직접 수정할 수 없습니다. 원본 내역을 찾을 수 없습니다.");
+      }
       return;
     }
     setEditingTransaction(tx);
@@ -180,9 +190,15 @@ export default function FlowScreen() {
     }
   };
 
-  const getCategoryIcon = (catName: string) => {
-    const cat = CATEGORIES.find(c => c.id === catName);
-    return (cat?.icon || "ellipsis-horizontal") as any;
+  const getCategoryIcon = (catLabel: string) => {
+    // Find icon from catalog based on label match
+    for (const type of ['expense', 'income', 'transfer'] as TransactionType[]) {
+      const group = CATEGORY_CATALOG[type].find(g => 
+        g.label === catLabel || g.subCategories.some(s => s.label === catLabel)
+      );
+      if (group) return group.icon as any;
+    }
+    return "ellipsis-horizontal";
   };
 
   const [calendarExpanded, setCalendarExpanded] = useState(false);
@@ -246,6 +262,7 @@ export default function FlowScreen() {
       {calendarExpanded && (
         <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
           <Calendar
+            key={isDark ? "dark-calendar-main" : "light-calendar-main"}
             current={`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`}
             onDayPress={onDayPress}
             onMonthChange={(month: any) => {
@@ -483,23 +500,56 @@ export default function FlowScreen() {
                 </>
               )}
 
-              {/* Category Picker */}
-              <AppText style={[styles.sectionLabel, { color: colors.textMuted }]}>카테고리</AppText>
-              <View style={styles.categoryGrid}>
-                {CATEGORIES.map(cat => (
-                  <TouchableOpacity
-                    key={cat.id}
-                    style={[
-                      styles.catBtn,
-                      category === cat.id && { backgroundColor: colors.accentBg, borderColor: colors.accent },
-                      category !== cat.id && { borderColor: colors.cardBorder }
-                    ]}
-                    onPress={() => setCategory(cat.id)}
-                  >
-                    <Ionicons name={cat.icon as any} size={20} color={category === cat.id ? colors.accent : colors.textMuted} />
-                    <AppText style={[styles.catBtnText, { color: category === cat.id ? colors.accent : colors.textMuted }]}>{cat.id}</AppText>
-                  </TouchableOpacity>
-                ))}
+              {/* Hierarchical Category Picker: Two-Step Selection */}
+              <View style={{ marginBottom: 24 }}>
+                <AppText style={[styles.sectionLabel, { color: colors.textMuted }]}>분류 선택</AppText>
+                
+                {/* 1st Step: Group Selection (Horizontal Scroll Tags) */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.groupScroll}>
+                  {CATEGORY_CATALOG[type].map(group => (
+                    <TouchableOpacity
+                      key={group.id}
+                      style={[
+                        styles.groupTag,
+                        selectedGroupId === group.id && { backgroundColor: type === 'expense' ? colors.danger : colors.accent, borderColor: 'transparent' },
+                        selectedGroupId !== group.id && { backgroundColor: colors.bgSecondary, borderColor: colors.cardBorder }
+                      ]}
+                      onPress={() => {
+                        setSelectedGroupId(group.id);
+                        // Auto-select first sub-category if not already in this group
+                        if (group.subCategories.length > 0) {
+                          setCategory(group.subCategories[0].label);
+                        } else {
+                          setCategory(group.label);
+                        }
+                      }}
+                    >
+                      <Ionicons name={group.icon as any} size={14} color={selectedGroupId === group.id ? "#FFF" : colors.textSecondary} />
+                      <AppText style={[styles.groupTagText, { color: selectedGroupId === group.id ? "#FFF" : colors.text }]}>{group.label}</AppText>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                {/* 2nd Step: Sub-Category Selection (Grid of compact tags) */}
+                {selectedGroupId && (
+                  <View style={styles.subCategoryRow}>
+                    {CATEGORY_CATALOG[type].find(g => g.id === selectedGroupId)?.subCategories.map(sub => (
+                      <TouchableOpacity
+                        key={sub.id}
+                        style={[
+                          styles.subTag,
+                          category === sub.label && { backgroundColor: isDark ? colors.accentBg : '#E8EEFF', borderColor: colors.accent },
+                          category !== sub.label && { borderColor: colors.cardBorder, backgroundColor: 'transparent' }
+                        ]}
+                        onPress={() => setCategory(sub.label)}
+                      >
+                        <AppText style={[styles.subTagText, { color: category === sub.label ? colors.accent : colors.textMuted }]}>
+                          {sub.label}
+                        </AppText>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
 
               {/* Date Input */}
@@ -521,6 +571,7 @@ export default function FlowScreen() {
               {showDatePicker && (
                 <View style={{ marginTop: 10, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: colors.cardBorder }}>
                   <Calendar
+                    key={isDark ? "dark-calendar-modal" : "light-calendar-modal"}
                     current={date}
                     onDayPress={(day: any) => {
                       setDate(day.dateString);
@@ -697,34 +748,46 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     backgroundColor: isDark ? "#050a14" : "#f1f5f9",
     borderWidth: 0,
   },
-  sectionLabel: { fontSize: 13, fontWeight: "700", color: "#888", marginBottom: 12, marginTop: 4 },
-  assetScroll: { marginBottom: 20 },
+  sectionLabel: { fontSize: 13, fontWeight: "700", color: "#888", marginBottom: 10, marginTop: 4 },
+  assetScroll: { marginBottom: 16 },
   assetBtn: { 
+    paddingHorizontal: 14, 
+    paddingVertical: 8, 
+    borderRadius: 12, 
+    marginRight: 8,
+    minWidth: 70,
+    alignItems: "center",
+    backgroundColor: isDark ? "#1a2235" : "#f1f5f9",
+    borderWidth: 0,
+  },
+  
+  // Hierarchical Category Styles
+  groupScroll: { marginBottom: 12 },
+  groupTag: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
     paddingHorizontal: 16, 
     paddingVertical: 10, 
-    borderRadius: 12, 
-    marginRight: 10,
-    minWidth: 80,
-    alignItems: "center",
-    backgroundColor: isDark ? "#1a2235" : "#f1f5f9",
-    borderWidth: 0,
+    borderRadius: 20, 
+    marginRight: 8, 
+    borderWidth: 1,
+    gap: 6
   },
-  categoryGrid: { 
-    flexDirection: "row", 
-    flexWrap: "wrap", 
-    gap: 10, 
-    marginBottom: 24 
+  groupTagText: { fontSize: 14, fontWeight: '700' },
+  subCategoryRow: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    gap: 8, 
+    paddingTop: 4 
   },
-  catBtn: {
-    width: "31%",
-    padding: 12,
-    borderRadius: 16,
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: isDark ? "#1a2235" : "#f1f5f9",
-    borderWidth: 0,
+  subTag: { 
+    paddingHorizontal: 14, 
+    paddingVertical: 6, 
+    borderRadius: 8, 
+    borderWidth: 1,
   },
-  catBtnText: { fontSize: 12, fontWeight: "600" },
+  subTagText: { fontSize: 13, fontWeight: '600' },
+
   toggleRow: {
     flexDirection: "row",
     alignItems: "center",

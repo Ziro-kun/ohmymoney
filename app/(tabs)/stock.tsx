@@ -32,6 +32,7 @@ export default function StockScreen() {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [type, setType] = useState<"asset" | "liability">("asset");
+  const [depreciationRate, setDepreciationRate] = useState("");
 
   useFocusEffect(
     useCallback(() => {
@@ -44,6 +45,7 @@ export default function StockScreen() {
     setName("");
     setAmount("");
     setType("asset");
+    setDepreciationRate("");
     setModalVisible(true);
   };
 
@@ -62,16 +64,19 @@ export default function StockScreen() {
   const openEditModal = (asset: any) => {
     setEditingAsset(asset);
     setName(asset.name);
-    setAmount(formatNumber(asset.amount, 0));
+    // Use seedAmount (original DB value) if available, otherwise fallback to amount
+    setAmount(formatNumber(asset.seedAmount ?? asset.amount, 0));
     setType(asset.type);
+    setDepreciationRate(asset.depreciationRate != null ? String(asset.depreciationRate) : "");
     setModalVisible(true);
   };
 
   const handleSave = async () => {
     if (!name || !amount) return;
     const numAmount = parseInt(amount.replace(/,/g, ""), 10);
+    const numRate = depreciationRate ? parseFloat(depreciationRate) : editingAsset?.depreciationRate;
     if (editingAsset) {
-      await updateAsset(editingAsset.id, name, numAmount, type, editingAsset.assetCategory, editingAsset.depreciationRate);
+      await updateAsset(editingAsset.id, name, numAmount, type, editingAsset.assetCategory, numRate);
     } else {
       await addAsset(name, numAmount, type);
     }
@@ -149,20 +154,31 @@ export default function StockScreen() {
               <AppText style={[styles.assetName, { color: colors.text }]}>
                 {item.name}
               </AppText>
-              <AppText style={[styles.assetType, { color: colors.textMuted }]}>
-                {item.type === "asset" ? "자산/투자" : "부채/대출"}
-              </AppText>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+                <AppText style={[styles.assetType, { color: colors.textMuted }]}>
+                  {item.assetCategory === "loan" ? "대출" :
+                   item.assetCategory === "vehicle" ? "차량" :
+                   item.assetCategory === "real_estate" ? "부동산" :
+                   item.assetCategory === "stock" ? "주식/투자" :
+                   item.type === "asset" ? "자산" : "부채"}
+                </AppText>
+                {item.depreciationRate != null && item.depreciationRate > 0 && (
+                  <AppText style={[styles.assetType, { color: colors.textMuted }]}>
+                    • 연 {item.depreciationRate}%
+                  </AppText>
+                )}
+              </View>
             </View>
             <AppText
               style={[
                 styles.assetAmount,
                 {
-                  color: item.type === "asset" ? colors.accent : colors.danger,
+                  color: (item.type === "asset" ? item.amount >= 0 : item.amount <= 0) ? colors.accent : colors.danger,
                 },
               ]}
             >
-              {item.type === "liability" ? "-" : ""}
-              {formatNumber(item.amount, 0)}원
+              {item.type === "liability" ? (item.amount > 0 ? "-" : "+") : (item.amount < 0 ? "-" : "")}
+              {formatNumber(Math.abs(item.amount), 0)}원
             </AppText>
           </TouchableOpacity>
         )}
@@ -262,6 +278,58 @@ export default function StockScreen() {
                 setAmount(numericValue);
               }}
             />
+
+            {editingAsset && (editingAsset.assetCategory === "loan" || editingAsset.assetCategory === "vehicle") && (
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    color: colors.text,
+                    borderColor: colors.inputBorder,
+                    backgroundColor: colors.input,
+                  },
+                ]}
+                placeholder={editingAsset.assetCategory === "loan" ? "연이자율 (%) 예: 4.5" : "연감가율 (%) 예: 10"}
+                placeholderTextColor={colors.textMuted}
+                keyboardType="decimal-pad"
+                value={depreciationRate}
+                onChangeText={setDepreciationRate}
+              />
+            )}
+
+            {/* Depreciation status for vehicle assets */}
+            {editingAsset?.assetCategory === "vehicle" && editingAsset.depreciationRate > 0 && editingAsset.createdAt && (
+              (() => {
+                const seedValue = editingAsset.seedAmount ?? 0;
+                const currentValue = editingAsset.amount ?? 0;
+                const depreciated = seedValue - currentValue;
+                const pctLost = seedValue > 0 ? Math.round((depreciated / seedValue) * 100) : 0;
+                const createdDate = new Date(editingAsset.createdAt.includes(" ") ? editingAsset.createdAt.replace(" ", "T") + "Z" : editingAsset.createdAt);
+                const daysPassed = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+                const yearsPassed = (daysPassed / 365).toFixed(1);
+                return (
+                  <View style={[styles.deprStatus, { backgroundColor: isDark ? "#0d1a30" : "#f8f9fb" }]}>
+                    <AppText style={[styles.deprStatusTitle, { color: colors.textMuted }]}>📉 감가상각 현황</AppText>
+                    <View style={styles.deprStatusRow}>
+                      <AppText style={{ color: colors.textSecondary, fontSize: 13 }}>원래 구매가</AppText>
+                      <AppText style={{ color: colors.text, fontSize: 13, fontWeight: "700" }}>₩{formatNumber(seedValue, 0)}</AppText>
+                    </View>
+                    <View style={styles.deprStatusRow}>
+                      <AppText style={{ color: colors.textSecondary, fontSize: 13 }}>현재 가치</AppText>
+                      <AppText style={{ color: colors.accent, fontSize: 13, fontWeight: "700" }}>₩{formatNumber(currentValue, 0)}</AppText>
+                    </View>
+                    <View style={styles.deprStatusRow}>
+                      <AppText style={{ color: colors.textSecondary, fontSize: 13 }}>감가된 금액</AppText>
+                      <AppText style={{ color: colors.danger, fontSize: 13, fontWeight: "700" }}>-₩{formatNumber(depreciated, 0)} (-{pctLost}%)</AppText>
+                    </View>
+                    <View style={styles.deprStatusRow}>
+                      <AppText style={{ color: colors.textSecondary, fontSize: 13 }}>경과 기간</AppText>
+                      <AppText style={{ color: colors.textMuted, fontSize: 13 }}>{yearsPassed}년 ({daysPassed}일)</AppText>
+                    </View>
+                  </View>
+                );
+              })()
+            )}
 
             <View style={styles.modalActions}>
               {editingAsset && (
@@ -417,6 +485,24 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 16,
     backgroundColor: isDark ? "#050a14" : "#f1f5f9",
     borderWidth: 0,
+  },
+  deprStatus: {
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+  },
+  deprStatusTitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    marginBottom: 10,
+  },
+  deprStatusRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 4,
   },
   modalActions: { flexDirection: "row", alignItems: "center", marginTop: 12 },
   deleteBtn: { paddingVertical: 10, paddingHorizontal: 5 },

@@ -6,7 +6,6 @@ import {
   AppState,
   AppStateStatus,
   Dimensions,
-  Platform,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -47,6 +46,7 @@ export default function DashboardScreen() {
     netWorth,
     perSecondBurnRate,
     dailyBurnRate,
+    isPrivacyMode,
   } = useFinanceStore();
   const { colors, isDark } = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -332,17 +332,19 @@ export default function DashboardScreen() {
                         { color: isDark ? colors.accent : colors.text },
                       ]}
                     >
-                      {integerPart}
+                      {isPrivacyMode ? "••••••" : integerPart}
                     </AppText>
-                    <AppText
-                      style={[
-                        styles.balanceDecimal,
-                        { color: isDark ? colors.accent : colors.textMuted },
-                        { opacity: 0.8 },
-                      ]}
-                    >
-                      .{decimalPart}
-                    </AppText>
+                    {!isPrivacyMode && (
+                      <AppText
+                        style={[
+                          styles.balanceDecimal,
+                          { color: isDark ? colors.accent : colors.textMuted },
+                          { opacity: 0.8 },
+                        ]}
+                      >
+                        .{decimalPart}
+                      </AppText>
+                    )}
                   </View>
                 </AnimatedRE.View>
 
@@ -390,16 +392,18 @@ export default function DashboardScreen() {
                     <AppText
                       style={[styles.balanceInteger, { color: colors.danger }]}
                     >
-                      {rateInteger}
+                      {isPrivacyMode ? "••••" : rateInteger}
                     </AppText>
-                    <AppText
-                      style={[
-                        styles.balanceDecimal,
-                        { color: colors.danger, opacity: 0.6 },
-                      ]}
-                    >
-                      .{rateDecimal}
-                    </AppText>
+                    {!isPrivacyMode && (
+                      <AppText
+                        style={[
+                          styles.balanceDecimal,
+                          { color: colors.danger, opacity: 0.6 },
+                        ]}
+                      >
+                        .{rateDecimal}
+                      </AppText>
+                    )}
                     <AppText
                       style={[
                         styles.emphasisUnitLabel,
@@ -428,13 +432,17 @@ export default function DashboardScreen() {
                 하루 고정 유지비 (Burn Rate)
               </AppText>
               <AppText style={[styles.statValue, { color: colors.danger }]}>
-                ₩{formatNumber(Math.floor(dailyBurnRate), 0)}
+                {isPrivacyMode
+                  ? "₩ •••,•••"
+                  : `₩${formatNumber(Math.floor(dailyBurnRate), 0)}`}
               </AppText>
             </View>
             <AppText style={styles.statSubtext}>
               현재 내 자산을 유지하기 위해 필요한 일일 최소 금액입니다.
             </AppText>
           </View>
+
+          <BurnMonitorCard />
 
           {isLosingMoney && <AICard />}
         </ScrollView>
@@ -443,8 +451,91 @@ export default function DashboardScreen() {
   );
 }
 
+function BurnMonitorCard() {
+  const { netWorth, dailyBurnRate, isPrivacyMode } = useFinanceStore();
+  const { colors, isDark } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
+
+  const DAYS_IN_MONTH = 30.44;
+  const monthlyBurn = dailyBurnRate * DAYS_IN_MONTH;
+  const positiveNetWorth = Math.max(netWorth, 0);
+
+  // Months until bankruptcy: how long current assets last at current burn rate
+  const monthsToBurn =
+    dailyBurnRate > 0 && positiveNetWorth > 0
+      ? positiveNetWorth / monthlyBurn
+      : null;
+
+  // Burn ratio: monthly expenses as % of net worth (capped at 100%)
+  const burnRatio =
+    positiveNetWorth > 0 ? Math.min(monthlyBurn / positiveNetWorth, 1) : 1;
+  const burnPercent = Math.round(burnRatio * 100);
+
+  // Status color based on severity
+  const statusColor =
+    burnPercent >= 50
+      ? colors.danger
+      : burnPercent >= 20
+        ? "#f59e0b"
+        : colors.accent;
+
+  const monthsToBurnLabel = () => {
+    if (netWorth <= 0) return "이미 적자";
+    if (dailyBurnRate <= 0) return "∞ (지출 없음)";
+    if (monthsToBurn === null) return "-";
+    if (monthsToBurn >= 999) return "999개월 이상";
+    const months = Math.floor(monthsToBurn);
+    const days = Math.round((monthsToBurn - months) * DAYS_IN_MONTH);
+    return days > 0 ? `${months}개월 ${days}일` : `${months}개월`;
+  };
+
+  return (
+    <View style={styles.burnMonitorCard}>
+      <AppText style={[styles.burnMonitorTitle, { color: colors.textMuted }]}>
+        번 모니터링 (Burn Monitoring)
+      </AppText>
+
+      <View style={styles.burnMonitorRow}>
+        <AppText style={[styles.burnMonitorLabel, { color: colors.textSecondary }]}>
+          월 고정 지출
+        </AppText>
+        <AppText style={[styles.burnMonitorValue, { color: colors.danger }]}>
+          {isPrivacyMode ? "₩ •••,•••" : `₩${formatNumber(Math.round(monthlyBurn), 0)}`}
+        </AppText>
+      </View>
+
+      <View style={styles.burnMonitorRow}>
+        <AppText style={[styles.burnMonitorLabel, { color: colors.textSecondary }]}>
+          자산 소진까지
+        </AppText>
+        <AppText style={[styles.burnMonitorValue, { color: statusColor }]}>
+          {isPrivacyMode ? "••••" : monthsToBurnLabel()}
+        </AppText>
+      </View>
+
+      {/* Progress bar */}
+      <View style={styles.burnBarTrack}>
+        <View
+          style={[
+            styles.burnBarFill,
+            { width: `${burnPercent}%` as any, backgroundColor: statusColor },
+          ]}
+        />
+      </View>
+      <View style={styles.burnBarLabels}>
+        <AppText style={[styles.burnBarLabelText, { color: colors.textMuted }]}>
+          순자산 대비 월 지출
+        </AppText>
+        <AppText style={[styles.burnBarLabelText, { color: statusColor, fontWeight: "700" }]}>
+          {isPrivacyMode ? "••%" : `${burnPercent}%`}
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
 function AICard() {
-  const { netWorth, dailyBurnRate } = useFinanceStore();
+  const { netWorth, dailyBurnRate, isPrivacyMode } = useFinanceStore();
   const { colors, isDark } = useAppTheme();
 
   const annualInterestRate = ANNUAL_INTEREST_RATE;
@@ -475,17 +566,19 @@ function AICard() {
     <View style={styles.aiCard}>
       <View style={styles.statRow}>
         <AppText style={styles.aiCardLabel}>
-          🤖 AI가 제안하는 30일 흑자 전환 플랜
+          🤖 AI가 제안하는 30일 흑자 전환 플랜(개발중)
         </AppText>
       </View>
       <AppText style={styles.planAppText}>
         이렇게 계속 돈이 나가면, 이 돈을 저축했을 때 벌 수 있었던 이자까지
         합쳐서 30일 동안 총{" "}
-        <AppText style={styles.planHighlight}>₩{formattedTotalLoss}</AppText>를
-        손해 보는 셈이에요.{"\n\n"}• 이걸 만회하려면{" "}
+        <AppText style={styles.planHighlight}>
+          {isPrivacyMode ? "₩ •••,•••" : `₩${formattedTotalLoss}`}
+        </AppText>
+        를 손해 보는 셈이에요.{"\n\n"}• 이걸 만회하려면{" "}
         <AppText style={styles.planHighlight}>앞으로 30일 동안</AppText> 매일{" "}
         <AppText style={styles.planHighlight}>
-          ₩{formattedRequiredDaily}
+          {isPrivacyMode ? "₩ •••,•••" : `₩${formattedRequiredDaily}`}
         </AppText>{" "}
         이상은 더 벌거나 아껴야 해요.{"\n"}• AI의 족집게 제안:{" "}
         <AppText style={styles.planHighlight}>
@@ -623,6 +716,44 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
     statLabel: { color: c.textSecondary, fontSize: 13, fontWeight: "500" },
     statValue: { fontSize: 20, fontWeight: "700" },
     statSubtext: { color: c.textMuted, fontSize: 12, lineHeight: 18 },
+
+    // ── Burn Monitor Card ────────────────────────────────────
+    burnMonitorCard: {
+      backgroundColor: isDark ? "#121e33" : "#f1f5f9",
+      borderRadius: 24,
+      padding: 20,
+      marginTop: 12,
+      borderWidth: 0,
+    },
+    burnMonitorTitle: {
+      fontSize: 12,
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginBottom: 14,
+    },
+    burnMonitorRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 10,
+    },
+    burnMonitorLabel: { fontSize: 13, fontWeight: "500" },
+    burnMonitorValue: { fontSize: 16, fontWeight: "700" },
+    burnBarTrack: {
+      height: 8,
+      backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)",
+      borderRadius: 4,
+      marginTop: 8,
+      overflow: "hidden",
+    },
+    burnBarFill: { height: "100%", borderRadius: 4 },
+    burnBarLabels: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 6,
+    },
+    burnBarLabelText: { fontSize: 11 },
 
     // ── AI Card ──────────────────────────────────────────────
     aiCard: {

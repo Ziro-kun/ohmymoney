@@ -310,24 +310,116 @@ export const loadDummyData = async () => {
   const carId = await addAsset("자가용 (아반떼)", 15000000, "asset", "vehicle", 10);
   
   const jeonseId = await addAsset("전세자금 대출", 50000000, "liability", "loan", 4.8);
-  const creditId = await addAsset("신용 대출", 10000000, "liability", "loan", 8.5);
+  const creditId = await addAsset("신용 대출", 30000000, "liability", "loan", 8.5);
 
   const today = new Date();
   const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
   const lastMonthStr = lastMonth.toISOString().split("T")[0];
   const todayStr = today.toISOString().split("T")[0];
 
-  // 1회성 내역
-  await addTransaction("맥도날드 점심", 12000, "expense", false, todayStr, "식비", shId as number);
-  await addTransaction("주유소", 50000, "expense", false, lastMonthStr, "교통", shId as number);
-  await addTransaction("중고거래 판매", 150000, "income", false, todayStr, "수입", shId as number);
+  // 1회성 내역 (새로운 계층형 카테고리 라벨 적용)
+  await addTransaction("맥도날드 점심", 12500, "expense", false, todayStr, "식사", shId as number);
+  await addTransaction("스타벅스 커피", 6500, "expense", false, todayStr, "카페/음료", shId as number);
+  await addTransaction("올리브영 쇼핑", 45000, "expense", false, todayStr, "쇼핑", shId as number);
+  await addTransaction("치과 진료", 28500, "expense", false, lastMonthStr, "병원/약국", shId as number);
+  await addTransaction("주유 (SK에너지)", 65000, "expense", false, lastMonthStr, "주유/자동차", shId as number);
+  await addTransaction("교보문고 북쇼핑", 32000, "expense", false, lastMonthStr, "도서/교육", tossId as number);
+  await addTransaction("유니클로 의류", 89000, "expense", false, lastMonthStr, "뷰티/패션", shId as number);
+  await addTransaction("전기요금 납부", 42000, "expense", false, todayStr, "공과금", shId as number);
+  await addTransaction("통신비 (SKT)", 55000, "expense", false, todayStr, "통신비", shId as number);
+  await addTransaction("헬스장 정기권", 330000, "expense", false, lastMonthStr, "운동/헬스", shId as number);
+  await addTransaction("중고 당근 판매", 150000, "income", false, todayStr, "중고거래", shId as number);
 
   // 정기 내역 (과거 날짜를 등록일로 하여 가상 트랜잭션이 발생하도록 유도)
-  // 대출 이자는 자산(부채)의 이자율 기반으로 자동 계산(Cascade)되므로 별도의 정기 지출 트랜잭션에서 제외
-  await addTransaction("월급 입금", 3500000, "income", true, lastMonthStr, "수입", shId as number, undefined, 25);
-  await addTransaction("신용대출 상환(원금)", 300000, "transfer", true, lastMonthStr, "이체", shId as number, creditId as number, 15);
-  await addTransaction("청약 저축(자동이체)", 100000, "transfer", true, lastMonthStr, "이체", shId as number, savingId as number, 25);
-  
-  await addTransaction("넷플릭스 구독", 17000, "expense", true, lastMonthStr, "생활", tossId as number, undefined, 15);
-  await addTransaction("유튜브 프리미엄", 14900, "expense", true, lastMonthStr, "생활", tossId as number, undefined, 1);
+  await addTransaction("월급 입금", 3800000, "income", true, "2024-01-01", "급여", shId as number, undefined, 25);
+  await addTransaction("청약 저축", 100000, "transfer", true, "2024-01-01", "저축/적금", shId as number, savingId as number, 25);
+  await addTransaction("넷플릭스", 17000, "expense", true, "2024-01-01", "정기구독/OTT", tossId as number, undefined, 15);
+  await addTransaction("유튜브 프리미엄", 14900, "expense", true, "2024-01-01", "정기구독/OTT", tossId as number, undefined, 1);
+  await addTransaction("아파트 관리비", 210000, "expense", true, "2024-01-01", "관리비/월세", shId as number, undefined, 10);
+  await addTransaction("대출 원금 상환", 500000, "transfer", true, "2024-01-01", "대출상환", shId as number, creditId as number, 15);
+};
+
+// --- Data Management (Repository Pattern) ---
+
+/**
+ * Restore the entire database from a backup object.
+ */
+export const restoreDatabase = async (backupData: any) => {
+  const database = await getDB();
+  await database.execAsync("BEGIN TRANSACTION;");
+  try {
+    // Clear existing data
+    await database.execAsync("DELETE FROM assets;");
+    await database.execAsync("DELETE FROM expenses;");
+    await database.execAsync("DELETE FROM transactions;");
+    await database.execAsync("DELETE FROM settings;");
+
+    // Restore Assets
+    for (const asset of backupData.data.assets) {
+      await database.runAsync(
+        "INSERT INTO assets (id, name, amount, type, assetCategory, depreciationRate, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [asset.id, asset.name, asset.amount, asset.type, asset.assetCategory, asset.depreciationRate, asset.createdAt]
+      );
+    }
+
+    // Restore Expenses
+    for (const expense of backupData.data.expenses) {
+      await database.runAsync(
+        "INSERT INTO expenses (id, name, amount, frequency, createdAt) VALUES (?, ?, ?, ?, ?)",
+        [expense.id, expense.name, expense.amount, expense.frequency, expense.createdAt]
+      );
+    }
+
+    // Restore Transactions
+    for (const tx of backupData.data.transactions) {
+      await database.runAsync(
+        "INSERT INTO transactions (id, description, amount, type, date, category, isFixed, assetId, toAssetId, recurringDay) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [tx.id, tx.description, tx.amount, tx.type, tx.date, tx.category, tx.isFixed ? 1 : 0, tx.assetId, tx.toAssetId, tx.recurringDay]
+      );
+    }
+
+    // Restore Settings
+    for (const setting of backupData.data.settings) {
+      await database.runAsync(
+        "INSERT INTO settings (key, value) VALUES (?, ?)",
+        [setting.key, setting.value]
+      );
+    }
+
+    await database.execAsync("COMMIT;");
+  } catch (error) {
+    await database.execAsync("ROLLBACK;");
+    console.error("Database restoration failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Bulk import transactions into the database.
+ */
+export const importTransactions = async (transactions: any[]) => {
+  const database = await getDB();
+  await database.execAsync("BEGIN TRANSACTION;");
+  try {
+    for (const tx of transactions) {
+      await database.runAsync(
+        "INSERT INTO transactions (description, amount, type, date, category, isFixed, assetId, toAssetId, recurringDay) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [tx.description, tx.amount, tx.type, tx.date, tx.category, tx.isFixed, tx.assetId, tx.toAssetId, tx.recurringDay]
+      );
+    }
+    await database.execAsync("COMMIT;");
+  } catch (error) {
+    await database.execAsync("ROLLBACK;");
+    console.error("Bulk transaction import failed:", error);
+    throw error;
+  }
+};
+/**
+ * Clear all data from the database.
+ */
+export const clearAllData = async () => {
+  const database = await getDB();
+  await database.execAsync(
+    "DELETE FROM assets; DELETE FROM expenses; DELETE FROM transactions; DELETE FROM settings;"
+  );
 };
