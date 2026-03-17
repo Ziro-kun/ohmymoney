@@ -100,7 +100,25 @@ export default function FlowScreen() {
 
   const openEditModal = (tx: Transaction) => {
     if (tx.isVirtual) {
-      Alert.alert("정기 내역", "정기적으로 자동 생성된 내역은 직접 수정할 수 없습니다. 원본 내역을 수정해주세요.");
+      // Find the original (non-virtual, isFixed) transaction by matching description
+      const originalDescription = tx.description.endsWith(" (정기)")
+        ? tx.description.slice(0, -5)
+        : tx.description;
+      const original = transactions.find(
+        t => !t.isVirtual && t.isFixed && t.description === originalDescription && t.amount === tx.amount
+      );
+      if (original) {
+        Alert.alert(
+          "정기 내역",
+          "자동 생성된 정기 내역입니다. 원본 내역을 수정하시겠습니까?",
+          [
+            { text: "취소", style: "cancel" },
+            { text: "원본 수정", onPress: () => openEditModal(original) },
+          ]
+        );
+      } else {
+        Alert.alert("정기 내역", "자동 생성된 내역은 직접 수정할 수 없습니다. 원본 내역을 찾을 수 없습니다.");
+      }
       return;
     }
     setEditingTransaction(tx);

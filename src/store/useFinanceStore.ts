@@ -20,6 +20,7 @@ export interface Asset {
   id: number;
   name: string;
   amount: number;
+  seedAmount?: number; // Original DB seed before transaction history is applied
   type: "asset" | "liability";
   assetCategory?: string;
   depreciationRate?: number;
@@ -297,7 +298,9 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     const pinLengthSetting = await getSetting("pinLength", "4");
     const pinLength = (pinLengthSetting === "6" ? 6 : 4) as 4 | 6;
     
-    const assetsData = (await getAssets()) as Asset[];
+    const rawAssetsData = (await getAssets()) as Asset[];
+    // Preserve DB seed amounts before transaction history is applied
+    const assetsData: Asset[] = rawAssetsData.map(a => ({ ...a, seedAmount: a.amount }));
     const expensesData = (await getExpenses()) as Expense[];
     const rawTransactionsData = (await getTransactions()) as any[];
 
