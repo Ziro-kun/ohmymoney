@@ -13,6 +13,7 @@ import { AppColorScheme } from "../../constants/theme";
 import { useAppTheme } from "../../hooks/useAppTheme";
 import { AppText } from "../../src/components/AppText";
 import { SecurityService } from "../../src/services/SecurityService";
+import { DataService } from "../../src/services/DataService";
 import { PinSetupModal } from "../../components/security/PinSetupModal";
 import { useFinanceStore } from "../../src/store/useFinanceStore";
 
@@ -51,6 +52,31 @@ export default function SettingsScreen() {
           onPress: async () => {
             await applyDummyData();
             Alert.alert("완료", "샘플 데이터가 적용되었습니다.");
+          },
+        },
+      ],
+    );
+  };
+
+  const handleExportData = async () => {
+    await DataService.exportData();
+  };
+
+  const handleImportData = async () => {
+    Alert.alert(
+      "데이터 가져오기",
+      "가져오기를 진행하면 현재 앱의 모든 데이터가 삭제되고 파일의 데이터로 대체됩니다. 계속하시겠습니까?",
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "가져오기",
+          style: "destructive",
+          onPress: async () => {
+            const success = await DataService.importData();
+            if (success) {
+              await loadData(); // Reload store from new DB
+              Alert.alert("완료", "데이터를 성공적으로 가져왔습니다.");
+            }
           },
         },
       ],
@@ -335,6 +361,81 @@ export default function SettingsScreen() {
               thumbColor={"#fff"}
             />
           </View>
+        </View>
+
+        {/* Data Management Section */}
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: isDark ? "#121e33" : "#f1f5f9" },
+          ]}
+        >
+          <AppText style={[styles.sectionTitle, { color: colors.textMuted }]}>
+            데이터 관리
+          </AppText>
+
+          {/* Export Data */}
+          <TouchableOpacity style={styles.menuItem} onPress={handleExportData}>
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: colors.accentBg },
+              ]}
+            >
+              <Ionicons name="share-outline" size={20} color={colors.accent} />
+            </View>
+            <AppText style={[styles.menuLabel, { color: colors.text }]}>
+              데이터 내보내기 (JSON 백업)
+            </AppText>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={colors.textMuted}
+            />
+          </TouchableOpacity>
+
+          {/* Import Data */}
+          <TouchableOpacity style={styles.menuItem} onPress={handleImportData}>
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: colors.accentBg },
+              ]}
+            >
+              <Ionicons name="download-outline" size={20} color={colors.accent} />
+            </View>
+            <AppText style={[styles.menuLabel, { color: colors.text }]}>
+              데이터 가져오기 (복원)
+            </AppText>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={colors.textMuted}
+            />
+          </TouchableOpacity>
+
+          {/* Sample Data (Moved here) */}
+          <TouchableOpacity
+            style={[styles.menuItem, { marginBottom: 0 }]}
+            onPress={handleApplyDummyData}
+          >
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: colors.accentBg },
+              ]}
+            >
+              <Ionicons name="refresh-outline" size={20} color={colors.accent} />
+            </View>
+            <AppText style={[styles.menuLabel, { color: colors.text }]}>
+              샘플 데이터 로드 (초기화)
+            </AppText>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={colors.textMuted}
+            />
+          </TouchableOpacity>
         </View>
 
         <View
