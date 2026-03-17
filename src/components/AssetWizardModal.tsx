@@ -208,10 +208,33 @@ export function AssetWizardModal({ visible, onClose }: AssetWizardModalProps) {
                             <TextInput
                               style={[styles.input, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.input }]}
                               placeholder="10"
-                              keyboardType="number-pad"
+                              keyboardType="decimal-pad"
                               value={depreciationRate}
                               onChangeText={setDepreciationRate}
                             />
+
+                            {/* Depreciation preview table */}
+                            {parseNum(totalValue) > 0 && parseFloat(depreciationRate || "0") > 0 && (
+                              <View style={[styles.deprPreview, { backgroundColor: isDark ? colors.bgSecondary : "#f8f9fb" }]}>
+                                <AppText style={[styles.deprPreviewTitle, { color: colors.textMuted }]}>
+                                  📉 감가상각 시뮬레이션
+                                </AppText>
+                                {[1, 2, 3, 5, 10].map((year) => {
+                                  const rate = parseFloat(depreciationRate || "0") / 100;
+                                  const value = Math.max(0, parseNum(totalValue) * (1 - rate * year));
+                                  const pct = Math.min(100, Math.round(rate * year * 100));
+                                  return (
+                                    <View key={year} style={styles.deprRow}>
+                                      <AppText style={[styles.deprYear, { color: colors.textSecondary }]}>{year}년 후</AppText>
+                                      <AppText style={[styles.deprValue, { color: value <= 0 ? colors.danger : colors.text }]}>
+                                        {value <= 0 ? "0원 (잔존가치 없음)" : `₩${formatNumber(Math.round(value), 0)}`}
+                                      </AppText>
+                                      <AppText style={[styles.deprPct, { color: colors.textMuted }]}>(-{pct}%)</AppText>
+                                    </View>
+                                  );
+                                })}
+                              </View>
+                            )}
                           </View>
                         )}
                       </View>
@@ -473,6 +496,28 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 13,
     marginLeft: 26,
   },
+  deprPreview: {
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  deprPreviewTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    marginBottom: 10,
+  },
+  deprRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 5,
+    gap: 8,
+  },
+  deprYear: { width: 48, fontSize: 13, fontWeight: "600" },
+  deprValue: { flex: 1, fontSize: 13, fontWeight: "700" },
+  deprPct: { fontSize: 12 },
   actionRow: {
     flexDirection: "row",
     justifyContent: "space-between",

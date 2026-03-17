@@ -297,6 +297,40 @@ export default function StockScreen() {
               />
             )}
 
+            {/* Depreciation status for vehicle assets */}
+            {editingAsset?.assetCategory === "vehicle" && editingAsset.depreciationRate > 0 && editingAsset.createdAt && (
+              (() => {
+                const seedValue = editingAsset.seedAmount ?? 0;
+                const currentValue = editingAsset.amount ?? 0;
+                const depreciated = seedValue - currentValue;
+                const pctLost = seedValue > 0 ? Math.round((depreciated / seedValue) * 100) : 0;
+                const createdDate = new Date(editingAsset.createdAt.includes(" ") ? editingAsset.createdAt.replace(" ", "T") + "Z" : editingAsset.createdAt);
+                const daysPassed = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+                const yearsPassed = (daysPassed / 365).toFixed(1);
+                return (
+                  <View style={[styles.deprStatus, { backgroundColor: isDark ? "#0d1a30" : "#f8f9fb" }]}>
+                    <AppText style={[styles.deprStatusTitle, { color: colors.textMuted }]}>📉 감가상각 현황</AppText>
+                    <View style={styles.deprStatusRow}>
+                      <AppText style={{ color: colors.textSecondary, fontSize: 13 }}>원래 구매가</AppText>
+                      <AppText style={{ color: colors.text, fontSize: 13, fontWeight: "700" }}>₩{formatNumber(seedValue, 0)}</AppText>
+                    </View>
+                    <View style={styles.deprStatusRow}>
+                      <AppText style={{ color: colors.textSecondary, fontSize: 13 }}>현재 가치</AppText>
+                      <AppText style={{ color: colors.accent, fontSize: 13, fontWeight: "700" }}>₩{formatNumber(currentValue, 0)}</AppText>
+                    </View>
+                    <View style={styles.deprStatusRow}>
+                      <AppText style={{ color: colors.textSecondary, fontSize: 13 }}>감가된 금액</AppText>
+                      <AppText style={{ color: colors.danger, fontSize: 13, fontWeight: "700" }}>-₩{formatNumber(depreciated, 0)} (-{pctLost}%)</AppText>
+                    </View>
+                    <View style={styles.deprStatusRow}>
+                      <AppText style={{ color: colors.textSecondary, fontSize: 13 }}>경과 기간</AppText>
+                      <AppText style={{ color: colors.textMuted, fontSize: 13 }}>{yearsPassed}년 ({daysPassed}일)</AppText>
+                    </View>
+                  </View>
+                );
+              })()
+            )}
+
             <View style={styles.modalActions}>
               {editingAsset && (
                 <TouchableOpacity
@@ -451,6 +485,24 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 16,
     backgroundColor: isDark ? "#050a14" : "#f1f5f9",
     borderWidth: 0,
+  },
+  deprStatus: {
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+  },
+  deprStatusTitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    marginBottom: 10,
+  },
+  deprStatusRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 4,
   },
   modalActions: { flexDirection: "row", alignItems: "center", marginTop: 12 },
   deleteBtn: { paddingVertical: 10, paddingHorizontal: 5 },
