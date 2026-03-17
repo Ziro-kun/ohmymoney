@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -185,10 +186,12 @@ export default function StockScreen() {
       />
 
       <Modal visible={modalVisible} animationType="fade" transparent>
-        <View style={[
-          styles.modalOverlay,
-          { backgroundColor: isDark ? "rgba(0,0,0,0.8)" : "rgba(0,0,0,0.4)" }
-        ]}>
+        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+          <View style={[
+            styles.modalOverlay,
+            { backgroundColor: isDark ? "rgba(0,0,0,0.8)" : "rgba(0,0,0,0.4)" }
+          ]}>
+          <TouchableWithoutFeedback>
           <View
             style={[
               styles.modalContent,
@@ -359,9 +362,11 @@ export default function StockScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+          </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
-      
+
       <AssetWizardModal 
         visible={wizardVisible} 
         onClose={() => setWizardVisible(false)} 

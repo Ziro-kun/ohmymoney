@@ -11,6 +11,7 @@ import {
   Switch,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -379,7 +380,9 @@ export default function FlowScreen() {
       </TouchableOpacity>
 
       <Modal visible={modalVisible} animationType="slide" transparent>
+        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback>
           <View
             style={[
               styles.modalContent,
@@ -636,7 +639,9 @@ export default function FlowScreen() {
               </View>
             </ScrollView>
           </View>
+          </TouchableWithoutFeedback>
         </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </SafeAreaView>
   );
