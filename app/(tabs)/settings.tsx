@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -13,6 +13,7 @@ import { AppColorScheme } from "../../constants/theme";
 import { useAppTheme } from "../../hooks/useAppTheme";
 import { AppText } from "../../src/components/AppText";
 import { SecurityService } from "../../src/services/SecurityService";
+import { PinSetupModal } from "../../components/security/PinSetupModal";
 import { useFinanceStore } from "../../src/store/useFinanceStore";
 
 export default function SettingsScreen() {
@@ -32,6 +33,9 @@ export default function SettingsScreen() {
   } = useFinanceStore();
   const { colors, isDark, toggleTheme } = useAppTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  const [isPinSetupVisible, setIsPinSetupVisible] = useState(false);
+  const [targetPinLength, setTargetPinLength] = useState<4 | 6>(4);
 
   const handleApplyDummyData = () => {
     Alert.alert(
@@ -71,24 +75,16 @@ export default function SettingsScreen() {
   };
 
   const startPinSetup = (length: number) => {
-    // In a real app, we'd navigate to a dedicated PIN setup screen.
-    // For now, we'll use a series of prompts for simplicity as a prototype.
-    Alert.prompt(
-      "PIN 등록",
-      `${length}자리 숫자를 입력하세요.`,
-      async (pin) => {
-        if (pin.length !== length || isNaN(Number(pin))) {
-          Alert.alert("오류", `${length}자리 숫자를 정확히 입력해주세요.`);
-          return;
-        }
-        
-        await SecurityService.savePIN(pin);
-        await setPinLength(length as 4 | 6);
-        await setSecurityEnabled(true);
-        Alert.alert("완료", "보안 잠금이 설정되었습니다.");
-      },
-      "secure-text"
-    );
+    setTargetPinLength(length as 4 | 6);
+    setIsPinSetupVisible(true);
+  };
+
+  const handlePinSetupSuccess = async (pin: string) => {
+    await SecurityService.savePIN(pin);
+    await setPinLength(targetPinLength);
+    await setSecurityEnabled(true);
+    setIsPinSetupVisible(false);
+    Alert.alert("완료", "보안 잠금이 설정되었습니다.");
   };
 
   const handleToggleBiometric = async (value: boolean) => {
@@ -357,6 +353,14 @@ export default function SettingsScreen() {
           텅-장 시뮬레이터: Tung-sim Live
         </AppText>
       </ScrollView>
+
+      {/* PIN Setup Modal */}
+      <PinSetupModal
+        isVisible={isPinSetupVisible}
+        length={targetPinLength}
+        onClose={() => setIsPinSetupVisible(false)}
+        onSuccess={handlePinSetupSuccess}
+      />
     </SafeAreaView>
   );
 }
