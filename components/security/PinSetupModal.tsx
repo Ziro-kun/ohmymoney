@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../../hooks/useAppTheme";
+import { SecurityService } from "../../src/services/SecurityService";
 import * as Haptics from "expo-haptics";
 import { AppText } from "../../src/components/AppText";
 
@@ -18,30 +19,32 @@ const { width } = Dimensions.get("window");
 interface PinSetupModalProps {
   isVisible: boolean;
   length: 4 | 6;
+  mode: "setup" | "verify";
   onClose: () => void;
-  onSuccess: (pin: string) => void;
+  onSuccess: (pin?: string) => void;
 }
 
 export const PinSetupModal: React.FC<PinSetupModalProps> = ({
   isVisible,
   length,
+  mode,
   onClose,
   onSuccess,
 }) => {
   const { colors, isDark } = useAppTheme();
-  const [step, setStep] = useState<"enter" | "confirm">("enter");
+  const [step, setStep] = useState<"enter" | "confirm" | "verify">("enter");
   const [pin, setPin] = useState<string>("");
   const [confirmPin, setConfirmPin] = useState<string>("");
   const [errorCount, setErrorCount] = useState(0);
 
   useEffect(() => {
     if (isVisible) {
-      setStep("enter");
+      setStep(mode === "verify" ? "verify" : "enter");
       setPin("");
       setConfirmPin("");
       setErrorCount(0);
     }
-  }, [isVisible]);
+  }, [isVisible, mode]);
 
   const handlePress = (num: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -53,24 +56,44 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
       if (newPin.length === length) {
         setTimeout(() => setStep("confirm"), 300);
       }
-    } else {
+    } else if (step === "confirm") {
       if (confirmPin.length >= length) return;
       const newConfirmPin = confirmPin + num;
       setConfirmPin(newConfirmPin);
       if (newConfirmPin.length === length) {
-        verify(newConfirmPin);
+        verifyNewPin(newConfirmPin);
+      }
+    } else if (step === "verify") {
+      if (pin.length >= length) return;
+      const newPin = pin + num;
+      setPin(newPin);
+      if (newPin.length === length) {
+        verifyCurrentPin(newPin);
       }
     }
   };
 
-  const verify = (enteredConfirm: string) => {
+  const verifyCurrentPin = async (entered: string) => {
+    const isValid = await SecurityService.verifyPIN(entered);
+    if (isValid) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onSuccess();
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Vibration.vibrate(400);
+      setPin("");
+      setErrorCount((c) => c + 1);
+    }
+  };
+
+  const verifyNewPin = (enteredConfirm: string) => {
     if (pin === enteredConfirm) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onSuccess(pin);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Vibration.vibrate(400);
-      setErrorCount(c => c + 1);
+      setErrorCount((c) => c + 1);
       setTimeout(() => {
         setStep("enter");
         setPin("");
@@ -81,17 +104,17 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
 
   const handleBackspace = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (step === "enter") {
+    if (step === "enter" || step === "verify") {
       setPin(pin.slice(0, -1));
     } else {
       setConfirmPin(confirmPin.slice(0, -1));
     }
   };
 
-  const currentPin = step === "enter" ? pin : confirmPin;
+  const currentPinDisplay = step === "confirm" ? confirmPin : pin;
 
   const renderDot = (index: number) => {
-    const isActive = index < currentPin.length;
+    const isActive = index < currentPinDisplay.length;
     return (
       <View
         key={index}
@@ -126,10 +149,23 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
 
         <View style={styles.content}>
           <AppText style={[styles.title, { color: colors.text }]}>
-            {step === "enter" ? "신규 PIN 번호 입력" : "PIN 번호 확인"}
+            {step === "enter"
+              ? "신규 PIN 번호 입력"
+              : step === "confirm"
+              ? "PIN 번호 확인"
+              : "기존 PIN 번호 인증"}
           </AppText>
-          <AppText style={[styles.hint, { color: errorCount > 0 ? colors.danger : colors.textMuted }]}>
-            {errorCount > 0 ? "PIN 번호가 일치하지 않습니다. 다시 시도하세요." : `${length}자리 숫자를 입력하세요.`}
+          <AppText
+            style={[
+              styles.hint,
+              { color: errorCount > 0 ? colors.danger : colors.textMuted },
+            ]}
+          >
+            {errorCount > 0
+              ? "PIN 번호가 일치하지 않습니다. 다시 시도하세요."
+              : step === "verify"
+              ? "현재 사용 중인 PIN 번호를 입력하세요."
+              : `${length}자리 숫자를 입력하세요.`}
           </AppText>
 
           <View style={styles.dotContainer}>

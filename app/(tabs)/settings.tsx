@@ -35,7 +35,9 @@ export default function SettingsScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [isPinSetupVisible, setIsPinSetupVisible] = useState(false);
+  const [pinSetupMode, setPinSetupMode] = useState<"setup" | "verify">("setup");
   const [targetPinLength, setTargetPinLength] = useState<4 | 6>(4);
+  const [pendingAction, setPendingAction] = useState<"change" | "disable" | null>(null);
 
   const handleApplyDummyData = () => {
     Alert.alert(
@@ -58,33 +60,63 @@ export default function SettingsScreen() {
   const handleToggleSecurity = async (value: boolean) => {
     if (value) {
       // Prompt for PIN length
-      Alert.alert(
-        "보안 설정",
-        "사용할 PIN 번호의 길이를 선택하세요.",
-        [
-          { text: "4자리", onPress: () => startPinSetup(4) },
-          { text: "6자리", onPress: () => startPinSetup(6) },
-          { text: "취소", style: "cancel" },
-        ]
-      );
+      Alert.alert("보안 설정", "사용할 PIN 번호의 길이를 선택하세요.", [
+        { text: "4자리", onPress: () => startPinSetup(4) },
+        { text: "6자리", onPress: () => startPinSetup(6) },
+        { text: "취소", style: "cancel" },
+      ]);
     } else {
-      await setSecurityEnabled(false);
-      await SecurityService.clearPIN();
-      Alert.alert("알림", "보안 잠금이 해제되었습니다.");
+      // Need to verify first
+      setPinSetupMode("verify");
+      setTargetPinLength(pinLength);
+      setPendingAction("disable");
+      setIsPinSetupVisible(true);
     }
   };
 
   const startPinSetup = (length: number) => {
-    setTargetPinLength(length as 4 | 6);
-    setIsPinSetupVisible(true);
+    // If security is already enabled, we might need verification first?
+    // But usually "Change PIN" handles that. This is for initial setup or change.
+    if (isSecurityEnabled) {
+      setPinSetupMode("verify");
+      setTargetPinLength(pinLength); // Verify current length first
+      setPendingAction("change");
+      setIsPinSetupVisible(true);
+    } else {
+      setPinSetupMode("setup");
+      setTargetPinLength(length as 4 | 6);
+      setIsPinSetupVisible(true);
+    }
   };
 
-  const handlePinSetupSuccess = async (pin: string) => {
-    await SecurityService.savePIN(pin);
-    await setPinLength(targetPinLength);
-    await setSecurityEnabled(true);
-    setIsPinSetupVisible(false);
-    Alert.alert("완료", "보안 잠금이 설정되었습니다.");
+  const handlePinSetupSuccess = async (newPin?: string) => {
+    if (pinSetupMode === "verify") {
+      if (pendingAction === "disable") {
+        await setSecurityEnabled(false);
+        await SecurityService.clearPIN();
+        setIsPinSetupVisible(false);
+        setPendingAction(null);
+        Alert.alert("알림", "보안 잠금이 해제되었습니다.");
+      } else if (pendingAction === "change") {
+        // Now proceed to setup
+        setPinSetupMode("setup");
+        // Ask for new length
+        Alert.alert("PIN 변경", "새로 사용할 PIN 번호의 길이를 선택하세요.", [
+          { text: "4자리", onPress: () => setTargetPinLength(4) },
+          { text: "6자리", onPress: () => setTargetPinLength(6) },
+        ]);
+        setPendingAction(null);
+      }
+    } else {
+      // Setup successful
+      if (newPin) {
+        await SecurityService.savePIN(newPin);
+        await setPinLength(targetPinLength);
+        await setSecurityEnabled(true);
+        setIsPinSetupVisible(false);
+        Alert.alert("완료", "보안 잠금이 설정되었습니다.");
+      }
+    }
   };
 
   const handleToggleBiometric = async (value: boolean) => {
@@ -358,7 +390,11 @@ export default function SettingsScreen() {
       <PinSetupModal
         isVisible={isPinSetupVisible}
         length={targetPinLength}
-        onClose={() => setIsPinSetupVisible(false)}
+        mode={pinSetupMode}
+        onClose={() => {
+          setIsPinSetupVisible(false);
+          setPendingAction(null);
+        }}
         onSuccess={handlePinSetupSuccess}
       />
     </SafeAreaView>
