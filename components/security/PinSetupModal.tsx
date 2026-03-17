@@ -195,6 +195,8 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
                 : "PIN 번호가 일치하지 않습니다. 다시 시도하세요."
               : step === "verify"
               ? "현재 사용 중인 PIN 번호를 입력하세요."
+              : step === "confirm"
+              ? "PIN 번호를 한 번 더 입력하세요."
               : `${length}자리 숫자를 입력하세요.`}
           </AppText>
 
