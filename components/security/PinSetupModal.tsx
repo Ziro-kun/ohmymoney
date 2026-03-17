@@ -55,6 +55,7 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
       setPin(newPin);
       if (newPin.length === length) {
         if (validatePinComplexity(newPin)) {
+          setErrorCount(0);
           setTimeout(() => setStep("confirm"), 300);
         } else {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
