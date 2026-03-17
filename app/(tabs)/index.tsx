@@ -6,7 +6,6 @@ import {
   AppState,
   AppStateStatus,
   Dimensions,
-  Platform,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -433,7 +432,9 @@ export default function DashboardScreen() {
                 하루 고정 유지비 (Burn Rate)
               </AppText>
               <AppText style={[styles.statValue, { color: colors.danger }]}>
-                {isPrivacyMode ? "₩ •••,•••" : `₩${formatNumber(Math.floor(dailyBurnRate), 0)}`}
+                {isPrivacyMode
+                  ? "₩ •••,•••"
+                  : `₩${formatNumber(Math.floor(dailyBurnRate), 0)}`}
               </AppText>
             </View>
             <AppText style={styles.statSubtext}>
@@ -480,14 +481,16 @@ function AICard() {
     <View style={styles.aiCard}>
       <View style={styles.statRow}>
         <AppText style={styles.aiCardLabel}>
-          🤖 AI가 제안하는 30일 흑자 전환 플랜
+          🤖 AI가 제안하는 30일 흑자 전환 플랜(개발중)
         </AppText>
       </View>
       <AppText style={styles.planAppText}>
         이렇게 계속 돈이 나가면, 이 돈을 저축했을 때 벌 수 있었던 이자까지
         합쳐서 30일 동안 총{" "}
-        <AppText style={styles.planHighlight}>{isPrivacyMode ? "₩ •••,•••" : `₩${formattedTotalLoss}`}</AppText>를
-        손해 보는 셈이에요.{"\n\n"}• 이걸 만회하려면{" "}
+        <AppText style={styles.planHighlight}>
+          {isPrivacyMode ? "₩ •••,•••" : `₩${formattedTotalLoss}`}
+        </AppText>
+        를 손해 보는 셈이에요.{"\n\n"}• 이걸 만회하려면{" "}
         <AppText style={styles.planHighlight}>앞으로 30일 동안</AppText> 매일{" "}
         <AppText style={styles.planHighlight}>
           {isPrivacyMode ? "₩ •••,•••" : `₩${formattedRequiredDaily}`}

@@ -9,12 +9,12 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PinSetupModal } from "../../components/security/PinSetupModal";
 import { AppColorScheme } from "../../constants/theme";
 import { useAppTheme } from "../../hooks/useAppTheme";
 import { AppText } from "../../src/components/AppText";
-import { SecurityService } from "../../src/services/SecurityService";
 import { DataService } from "../../src/services/DataService";
-import { PinSetupModal } from "../../components/security/PinSetupModal";
+import { SecurityService } from "../../src/services/SecurityService";
 import { useFinanceStore } from "../../src/store/useFinanceStore";
 
 export default function SettingsScreen() {
@@ -43,7 +43,9 @@ export default function SettingsScreen() {
   const [isPinSetupVisible, setIsPinSetupVisible] = useState(false);
   const [pinSetupMode, setPinSetupMode] = useState<"setup" | "verify">("setup");
   const [targetPinLength, setTargetPinLength] = useState<4 | 6>(4);
-  const [pendingAction, setPendingAction] = useState<"change" | "disable" | null>(null);
+  const [pendingAction, setPendingAction] = useState<
+    "change" | "disable" | null
+  >(null);
 
   const handleDataInitializationMenu = () => {
     Alert.alert(
@@ -67,7 +69,7 @@ export default function SettingsScreen() {
                     Alert.alert("완료", "모든 데이터가 삭제되었습니다.");
                   },
                 },
-              ]
+              ],
             );
           },
         },
@@ -79,32 +81,24 @@ export default function SettingsScreen() {
           },
         },
         { text: "취소", style: "cancel" },
-      ]
+      ],
     );
   };
 
   const handleExportMenu = () => {
-    Alert.alert(
-      "데이터 내보내기",
-      "내보낼 데이터 형식을 선택해주세요.",
-      [
-        { text: "JSON (전체 백업)", onPress: handleExportData },
-        { text: "CSV (거래 템플릿)", onPress: handleExportCSVTemplate },
-        { text: "취소", style: "cancel" },
-      ]
-    );
+    Alert.alert("데이터 내보내기", "내보낼 데이터 형식을 선택해주세요.", [
+      { text: "JSON (전체 백업)", onPress: handleExportData },
+      { text: "CSV (거래 템플릿)", onPress: handleExportCSVTemplate },
+      { text: "취소", style: "cancel" },
+    ]);
   };
 
   const handleImportMenu = () => {
-    Alert.alert(
-      "데이터 불러오기",
-      "불러올 데이터 형식을 선택해주세요.",
-      [
-        { text: "JSON (전체 복원)", onPress: handleImportData },
-        { text: "CSV (거래내역 추가)", onPress: handleImportCSV },
-        { text: "취소", style: "cancel" },
-      ]
-    );
+    Alert.alert("데이터 불러오기", "불러올 데이터 형식을 선택해주세요.", [
+      { text: "JSON (전체 복원)", onPress: handleImportData },
+      { text: "CSV (거래내역 추가)", onPress: handleImportCSV },
+      { text: "취소", style: "cancel" },
+    ]);
   };
 
   // Inner helper functions for consolidated menus
@@ -143,7 +137,10 @@ export default function SettingsScreen() {
                 Alert.alert("완료", "거래 내역이 성공적으로 추가되었습니다.");
               }
             } catch (error: any) {
-              Alert.alert("오류", error.message || "CSV 가져오기에 실패했습니다.");
+              Alert.alert(
+                "오류",
+                error.message || "CSV 가져오기에 실패했습니다.",
+              );
             }
           },
         },
@@ -168,7 +165,10 @@ export default function SettingsScreen() {
                 Alert.alert("완료", "데이터를 성공적으로 가져왔습니다.");
               }
             } catch (error: any) {
-              Alert.alert("오류", error.message || "데이터를 가져오는데 실패했습니다.");
+              Alert.alert(
+                "오류",
+                error.message || "데이터를 가져오는데 실패했습니다.",
+              );
             }
           },
         },
@@ -241,10 +241,16 @@ export default function SettingsScreen() {
     if (value) {
       const isAvailable = await SecurityService.isBiometricAvailable();
       if (!isAvailable) {
-        Alert.alert("오류", "이 기기에서 사용할 수 있는 생체 인증 수단이 없습니다.");
+        Alert.alert(
+          "오류",
+          "이 기기에서 사용할 수 있는 생체 인증 수단이 없습니다.",
+        );
         return;
       }
-      const success = await SecurityService.authenticateBiometric("생체 인증을 활성화합니다.");
+      const success =
+        await SecurityService.authenticateBiometric(
+          "생체 인증을 활성화합니다.",
+        );
       if (success) {
         await setBiometricEnabled(true);
       }
@@ -259,7 +265,9 @@ export default function SettingsScreen() {
         <AppText style={[styles.title, { color: colors.text }]}>설정</AppText>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 }]}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 }]}
+      >
         {/* Theme Section */}
         <View
           style={[
@@ -271,8 +279,23 @@ export default function SettingsScreen() {
             테마
           </AppText>
 
-          <View style={[styles.menuItem, { paddingVertical: 12, flexDirection: 'column', alignItems: 'flex-start' }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+          <View
+            style={[
+              styles.menuItem,
+              {
+                paddingVertical: 12,
+                flexDirection: "column",
+                alignItems: "flex-start",
+              },
+            ]}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
               <View
                 style={[
                   styles.iconContainer,
@@ -290,12 +313,25 @@ export default function SettingsScreen() {
               </AppText>
             </View>
 
-            <View style={[styles.themePickerContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>
+            <View
+              style={[
+                styles.themePickerContainer,
+                {
+                  backgroundColor: isDark
+                    ? "rgba(255,255,255,0.06)"
+                    : "rgba(0,0,0,0.05)",
+                },
+              ]}
+            >
               {(
                 [
-                  { mode: 'light',  icon: 'sunny',                   label: '라이트' },
-                  { mode: 'dark',   icon: 'moon',                    label: '다크'   },
-                  { mode: 'system', icon: 'phone-portrait-outline',  label: '시스템' },
+                  { mode: "light", icon: "sunny", label: "라이트" },
+                  { mode: "dark", icon: "moon", label: "다크" },
+                  {
+                    mode: "system",
+                    icon: "phone-portrait-outline",
+                    label: "시스템",
+                  },
                 ] as const
               ).map(({ mode, icon, label }) => {
                 const active = themeMode === mode;
@@ -319,13 +355,13 @@ export default function SettingsScreen() {
                     <Ionicons
                       name={icon}
                       size={18}
-                      color={active ? '#fff' : colors.textMuted}
+                      color={active ? "#fff" : colors.textMuted}
                       style={{ marginBottom: 5 }}
                     />
                     <AppText
                       style={[
                         styles.themePickerLabel,
-                        { color: active ? '#fff' : colors.textMuted },
+                        { color: active ? "#fff" : colors.textMuted },
                       ]}
                     >
                       {label}
@@ -336,7 +372,9 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          <View style={[styles.menuItem, { paddingVertical: 12, marginBottom: 0 }]}>
+          <View
+            style={[styles.menuItem, { paddingVertical: 12, marginBottom: 0 }]}
+          >
             <View
               style={[
                 styles.iconContainer,
@@ -349,14 +387,20 @@ export default function SettingsScreen() {
               <AppText style={[styles.menuLabel, { color: colors.text }]}>
                 색약 모드
               </AppText>
-              <AppText style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
-                차트 및 중요 지표의 색상을 색약자가 식별하기 쉬운 톤으로 변경합니다.
+              <AppText
+                style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}
+              >
+                차트 및 중요 지표의 색상을 색약자가 식별하기 쉬운 톤으로
+                변경합니다.
               </AppText>
             </View>
             <Switch
               value={isColorBlindMode}
               onValueChange={setColorBlindMode}
-              trackColor={{ false: isDark ? "#333" : "#ddd", true: colors.accent }}
+              trackColor={{
+                false: isDark ? "#333" : "#ddd",
+                true: colors.accent,
+              }}
               thumbColor={"#fff"}
             />
           </View>
@@ -386,19 +430,27 @@ export default function SettingsScreen() {
               <AppText style={[styles.menuLabel, { color: colors.text }]}>
                 정기 내역 자동 생성
               </AppText>
-              <AppText style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
-                지정된 일자에 정기 지출/수입 내역을 가상으로 생성하여 자산에 반영합니다.
+              <AppText
+                style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}
+              >
+                지정된 일자에 정기 지출/수입 내역을 가상으로 생성하여 자산에
+                반영합니다.
               </AppText>
             </View>
             <Switch
               value={autoGenerateVirtualTxs}
               onValueChange={setAutoGenerateVirtualTxs}
-              trackColor={{ false: isDark ? "#333" : "#ddd", true: colors.accent }}
+              trackColor={{
+                false: isDark ? "#333" : "#ddd",
+                true: colors.accent,
+              }}
               thumbColor={"#fff"}
             />
           </View>
 
-          <View style={[styles.menuItem, { paddingVertical: 12, marginBottom: 0 }]}>
+          <View
+            style={[styles.menuItem, { paddingVertical: 12, marginBottom: 0 }]}
+          >
             <View
               style={[
                 styles.iconContainer,
@@ -411,14 +463,20 @@ export default function SettingsScreen() {
               <AppText style={[styles.menuLabel, { color: colors.text }]}>
                 감가 계산 자동화
               </AppText>
-              <AppText style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
-                차량 등 고정 자산의 가치 하락을 실시간으로 계산하여 순자산에 반영합니다.
+              <AppText
+                style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}
+              >
+                차량 등 고정 자산의 가치 하락을 실시간으로 계산하여 순자산에
+                반영합니다.
               </AppText>
             </View>
             <Switch
               value={isAutoDepreciationEnabled}
               onValueChange={setAutoDepreciationEnabled}
-              trackColor={{ false: isDark ? "#333" : "#ddd", true: colors.accent }}
+              trackColor={{
+                false: isDark ? "#333" : "#ddd",
+                true: colors.accent,
+              }}
               thumbColor={"#fff"}
             />
           </View>
@@ -448,14 +506,19 @@ export default function SettingsScreen() {
               <AppText style={[styles.menuLabel, { color: colors.text }]}>
                 앱 잠금 (PIN)
               </AppText>
-              <AppText style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
+              <AppText
+                style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}
+              >
                 앱 실행 시 PIN 번호 입력을 요청합니다.
               </AppText>
             </View>
             <Switch
               value={isSecurityEnabled}
               onValueChange={handleToggleSecurity}
-              trackColor={{ false: isDark ? "#333" : "#ddd", true: colors.accent }}
+              trackColor={{
+                false: isDark ? "#333" : "#ddd",
+                true: colors.accent,
+              }}
               thumbColor={"#fff"}
             />
           </View>
@@ -475,14 +538,23 @@ export default function SettingsScreen() {
                 <AppText style={[styles.menuLabel, { color: colors.text }]}>
                   생체 인증 사용
                 </AppText>
-                <AppText style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
+                <AppText
+                  style={{
+                    fontSize: 12,
+                    color: colors.textMuted,
+                    marginTop: 4,
+                  }}
+                >
                   FaceID / 지문 인식으로 잠금을 해제합니다.
                 </AppText>
               </View>
               <Switch
                 value={isBiometricEnabled}
                 onValueChange={handleToggleBiometric}
-                trackColor={{ false: isDark ? "#333" : "#ddd", true: colors.accent }}
+                trackColor={{
+                  false: isDark ? "#333" : "#ddd",
+                  true: colors.accent,
+                }}
                 thumbColor={"#fff"}
               />
             </View>
@@ -490,10 +562,7 @@ export default function SettingsScreen() {
 
           {/* PIN Length Selection (Display only when enabled) */}
           {isSecurityEnabled && (
-            <TouchableOpacity 
-              style={styles.menuItem} 
-              onPress={handleChangePIN}
-            >
+            <TouchableOpacity style={styles.menuItem} onPress={handleChangePIN}>
               <View
                 style={[
                   styles.iconContainer,
@@ -514,7 +583,9 @@ export default function SettingsScreen() {
           )}
 
           {/* Privacy Mode */}
-          <View style={[styles.menuItem, { paddingVertical: 12, marginBottom: 0 }]}>
+          <View
+            style={[styles.menuItem, { paddingVertical: 12, marginBottom: 0 }]}
+          >
             <View
               style={[
                 styles.iconContainer,
@@ -527,14 +598,19 @@ export default function SettingsScreen() {
               <AppText style={[styles.menuLabel, { color: colors.text }]}>
                 개인정보 보호 모드
               </AppText>
-              <AppText style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
+              <AppText
+                style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}
+              >
                 메인 화면의 자산 금액을 마스킹 처리하여 숨깁니다.
               </AppText>
             </View>
             <Switch
               value={isPrivacyMode}
               onValueChange={setPrivacyMode}
-              trackColor={{ false: isDark ? "#333" : "#ddd", true: colors.accent }}
+              trackColor={{
+                false: isDark ? "#333" : "#ddd",
+                true: colors.accent,
+              }}
               thumbColor={"#fff"}
             />
           </View>
@@ -579,7 +655,11 @@ export default function SettingsScreen() {
                 { backgroundColor: colors.accentBg },
               ]}
             >
-              <Ionicons name="download-outline" size={20} color={colors.accent} />
+              <Ionicons
+                name="download-outline"
+                size={20}
+                color={colors.accent}
+              />
             </View>
             <AppText style={[styles.menuLabel, { color: colors.text }]}>
               데이터 불러오기 (JSON / CSV)
@@ -591,7 +671,14 @@ export default function SettingsScreen() {
             />
           </TouchableOpacity>
 
-          <View style={{ height: 1, backgroundColor: isDark ? "#ffffff10" : "#00000005", marginVertical: 4, marginLeft: 48 }} />
+          <View
+            style={{
+              height: 1,
+              backgroundColor: isDark ? "#ffffff10" : "#00000005",
+              marginVertical: 4,
+              marginLeft: 48,
+            }}
+          />
 
           {/* Data Reset Consolidated */}
           <TouchableOpacity
@@ -644,16 +731,6 @@ export default function SettingsScreen() {
             </AppText>
             <AppText style={[styles.infoValue, { color: colors.text }]}>
               v1.0.0
-            </AppText>
-          </View>
-          <View style={styles.infoRow}>
-            <AppText
-              style={[styles.infoLabel, { color: colors.textSecondary }]}
-            >
-              개발자
-            </AppText>
-            <AppText style={[styles.infoValue, { color: colors.text }]}>
-              Ziro
             </AppText>
           </View>
         </View>
@@ -722,21 +799,21 @@ const makeStyles = (c: AppColorScheme, isDark: boolean) =>
       letterSpacing: 0.5,
     },
     themePickerContainer: {
-      flexDirection: 'row',
+      flexDirection: "row",
       borderRadius: 16,
       padding: 6,
-      width: '100%',
+      width: "100%",
       gap: 6,
     },
     themePickerButton: {
       flex: 1,
       paddingVertical: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       borderRadius: 12,
     },
     themePickerLabel: {
       fontSize: 12,
-      fontWeight: '700',
+      fontWeight: "700",
     },
   });
