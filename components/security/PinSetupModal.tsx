@@ -54,7 +54,14 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
       const newPin = pin + num;
       setPin(newPin);
       if (newPin.length === length) {
-        setTimeout(() => setStep("confirm"), 300);
+        if (validatePinComplexity(newPin)) {
+          setTimeout(() => setStep("confirm"), 300);
+        } else {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          Vibration.vibrate(400);
+          setPin("");
+          setErrorCount((c) => c + 1);
+        }
       }
     } else if (step === "confirm") {
       if (confirmPin.length >= length) return;
@@ -111,6 +118,26 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
     }
   };
 
+  const validatePinComplexity = (p: string) => {
+    // 1. Same digits 3 times in a row (e.g. 000, 111)
+    for (let i = 0; i <= p.length - 3; i++) {
+      if (p[i] === p[i+1] && p[i] === p[i+2]) return false;
+    }
+
+    // 2. Sequential digits (e.g. 1234, 4321)
+    let isAsc = true;
+    let isDesc = true;
+    for (let i = 0; i < p.length - 1; i++) {
+      const curr = parseInt(p[i]);
+      const next = parseInt(p[i+1]);
+      if (next !== curr + 1) isAsc = false;
+      if (next !== curr - 1) isDesc = false;
+    }
+    if (isAsc || isDesc) return false;
+
+    return true;
+  };
+
   const currentPinDisplay = step === "confirm" ? confirmPin : pin;
 
   const renderDot = (index: number) => {
@@ -162,7 +189,9 @@ export const PinSetupModal: React.FC<PinSetupModalProps> = ({
             ]}
           >
             {errorCount > 0
-              ? "PIN 번호가 일치하지 않습니다. 다시 시도하세요."
+              ? step === "enter"
+                ? "쉬운 번호는 사용할 수 없습니다. (중복/연속 숫자 등)"
+                : "PIN 번호가 일치하지 않습니다. 다시 시도하세요."
               : step === "verify"
               ? "현재 사용 중인 PIN 번호를 입력하세요."
               : `${length}자리 숫자를 입력하세요.`}
