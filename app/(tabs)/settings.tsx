@@ -74,19 +74,17 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleChangePIN = () => {
+    setPinSetupMode("verify");
+    setTargetPinLength(pinLength);
+    setPendingAction("change");
+    setIsPinSetupVisible(true);
+  };
+
   const startPinSetup = (length: number) => {
-    // If security is already enabled, we might need verification first?
-    // But usually "Change PIN" handles that. This is for initial setup or change.
-    if (isSecurityEnabled) {
-      setPinSetupMode("verify");
-      setTargetPinLength(pinLength); // Verify current length first
-      setPendingAction("change");
-      setIsPinSetupVisible(true);
-    } else {
-      setPinSetupMode("setup");
-      setTargetPinLength(length as 4 | 6);
-      setIsPinSetupVisible(true);
-    }
+    setPinSetupMode("setup");
+    setTargetPinLength(length as 4 | 6);
+    setIsPinSetupVisible(true);
   };
 
   const handlePinSetupSuccess = async (newPin?: string) => {
@@ -291,7 +289,7 @@ export default function SettingsScreen() {
           {isSecurityEnabled && (
             <TouchableOpacity 
               style={styles.menuItem} 
-              onPress={() => handleToggleSecurity(true)}
+              onPress={handleChangePIN}
             >
               <View
                 style={[
