@@ -4,12 +4,16 @@ import {
   addTransaction as dbAddTransaction,
   getAssets,
   getExpenses,
+  getPaymentMethods,
   getTransactions,
   initializeDB,
   loadDummyData,
   removeAsset,
+  removePaymentMethod,
   removeTransaction,
   updateAsset,
+  addPaymentMethod as dbAddPaymentMethod,
+  updatePaymentMethod as dbUpdatePaymentMethod,
   updateTransaction as dbUpdateTransaction,
   getSetting,
   updateSetting,
@@ -34,6 +38,17 @@ export interface Expense {
   frequency: "daily" | "weekly" | "monthly" | "yearly";
 }
 
+export interface PaymentMethod {
+  id: number;
+  name: string;
+  type: "debit" | "credit" | "cash";
+  linkedAssetId: number;
+  billingDay?: number | null;
+  billingAssetId?: number | null;
+  color?: string | null;
+  createdAt?: string;
+}
+
 export interface Transaction {
   id: number;
   description: string;
@@ -45,6 +60,7 @@ export interface Transaction {
   assetId?: number;
   toAssetId?: number;
   recurringDay?: number | null;
+  paymentMethodId?: number | null;
   isVirtual?: boolean;
 }
 
@@ -52,6 +68,7 @@ interface FinanceState {
   isInitialized: boolean;
   assets: Asset[];
   expenses: Expense[];
+  paymentMethods: PaymentMethod[];
   transactions: Transaction[];
 
   // Computed (updated regularly)
@@ -77,6 +94,26 @@ interface FinanceState {
     depreciationRate?: number
   ) => Promise<void>;
   deleteAsset: (id: number) => Promise<void>;
+
+  addPaymentMethod: (
+    name: string,
+    type: "debit" | "credit" | "cash",
+    linkedAssetId: number,
+    billingDay?: number | null,
+    billingAssetId?: number | null,
+    color?: string | null
+  ) => Promise<void>;
+  updatePaymentMethod: (
+    id: number,
+    name: string,
+    type: "debit" | "credit" | "cash",
+    linkedAssetId: number,
+    billingDay?: number | null,
+    billingAssetId?: number | null,
+    color?: string | null
+  ) => Promise<void>;
+  deletePaymentMethod: (id: number) => Promise<void>;
+
   addTransaction: (
     name: string,
     amount: number,
@@ -86,7 +123,8 @@ interface FinanceState {
     category?: string,
     assetId?: number,
     toAssetId?: number,
-    recurringDay?: number | null
+    recurringDay?: number | null,
+    paymentMethodId?: number | null
   ) => Promise<void>;
   updateTransaction: (
     id: number,
@@ -98,7 +136,8 @@ interface FinanceState {
     category?: string,
     assetId?: number,
     toAssetId?: number,
-    recurringDay?: number | null
+    recurringDay?: number | null,
+    paymentMethodId?: number | null
   ) => Promise<void>;
   deleteTransaction: (id: number) => Promise<void>;
   applyDummyData: () => Promise<void>;
@@ -233,6 +272,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   isInitialized: false,
   assets: [],
   expenses: [],
+  paymentMethods: [],
   transactions: [],
   netWorth: 0,
   dailyBurnRate: 0,
@@ -302,6 +342,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     // Preserve DB seed amounts before transaction history is applied
     const assetsData: Asset[] = rawAssetsData.map(a => ({ ...a, seedAmount: a.amount }));
     const expensesData = (await getExpenses()) as Expense[];
+    const paymentMethodsData = (await getPaymentMethods()) as PaymentMethod[];
     const rawTransactionsData = (await getTransactions()) as any[];
 
     // Expand fixed transactions with recurringDay into virtual transactions
@@ -421,6 +462,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       isInitialized: true,
       assets: depreciatedAssets,
       expenses: expensesData,
+      paymentMethods: paymentMethodsData,
       transactions: transactionsData as Transaction[],
       netWorth,
       dailyBurnRate,
@@ -450,13 +492,28 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await get().loadData();
   },
 
-  addTransaction: async (name, amount, type, isFixed, date, category, assetId, toAssetId, recurringDay) => {
-    await dbAddTransaction(name, amount, type, isFixed, date, category, assetId, toAssetId, recurringDay);
+  addPaymentMethod: async (name, type, linkedAssetId, billingDay, billingAssetId, color) => {
+    await dbAddPaymentMethod(name, type, linkedAssetId, billingDay, billingAssetId, color);
     await get().loadData();
   },
 
-  updateTransaction: async (id, name, amount, type, isFixed, date, category, assetId, toAssetId, recurringDay) => {
-    await dbUpdateTransaction(id, name, amount, type, isFixed, date, category, assetId, toAssetId, recurringDay);
+  updatePaymentMethod: async (id, name, type, linkedAssetId, billingDay, billingAssetId, color) => {
+    await dbUpdatePaymentMethod(id, name, type, linkedAssetId, billingDay, billingAssetId, color);
+    await get().loadData();
+  },
+
+  deletePaymentMethod: async (id) => {
+    await removePaymentMethod(id);
+    await get().loadData();
+  },
+
+  addTransaction: async (name, amount, type, isFixed, date, category, assetId, toAssetId, recurringDay, paymentMethodId) => {
+    await dbAddTransaction(name, amount, type, isFixed, date, category, assetId, toAssetId, recurringDay, paymentMethodId);
+    await get().loadData();
+  },
+
+  updateTransaction: async (id, name, amount, type, isFixed, date, category, assetId, toAssetId, recurringDay, paymentMethodId) => {
+    await dbUpdateTransaction(id, name, amount, type, isFixed, date, category, assetId, toAssetId, recurringDay, paymentMethodId);
     await get().loadData();
   },
 

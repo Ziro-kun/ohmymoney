@@ -40,6 +40,7 @@ export default function FlowScreen() {
   const { 
     transactions, 
     assets,
+    paymentMethods,
     loadData, 
     addTransaction, 
     updateTransaction, 
@@ -50,6 +51,7 @@ export default function FlowScreen() {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [isCategoryAccordionOpen, setIsCategoryAccordionOpen] = useState(false);
   
   // Form States
   const [type, setType] = useState<"expense" | "income" | "transfer">("expense");
@@ -61,6 +63,7 @@ export default function FlowScreen() {
   const [category, setCategory] = useState("기타");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [assetId, setAssetId] = useState<number | undefined>(undefined);
+  const [paymentMethodId, setPaymentMethodId] = useState<number | undefined>(undefined);
   const [toAssetId, setToAssetId] = useState<number | undefined>(undefined);
 
   useFocusEffect(
@@ -130,15 +133,43 @@ export default function FlowScreen() {
     setDate(tx.date);
     setCategory(tx.category || "기타");
     setAssetId(tx.assetId);
+    setPaymentMethodId(tx.paymentMethodId || undefined);
     setToAssetId(tx.toAssetId);
     setModalVisible(true);
     setShowDatePicker(false);
+    setIsCategoryAccordionOpen(false);
+  };
+
+  const handleDescriptionChange = (text: string) => {
+    setDescription(text);
+    if (!text) return;
+
+    for (const group of CATEGORY_CATALOG[type]) {
+      if (text.includes(group.label)) {
+        setSelectedGroupId(group.id);
+        setCategory(group.label);
+        return;
+      }
+      for (const sub of group.subCategories) {
+        if (text.includes(sub.label)) {
+          setSelectedGroupId(group.id);
+          setCategory(sub.label);
+          return;
+        }
+      }
+    }
   };
 
   const handleSave = async () => {
     if (!amount || !description) return;
     const numAmount = parseInt(amount.replace(/,/g, ""), 10);
     const numRecurringDay = isFixed ? parseInt(date.split("-")[2], 10) : null;
+
+    let finalAssetId = assetId;
+    if (type === "expense" && paymentMethodId) {
+      const pm = paymentMethods.find((p) => p.id === paymentMethodId);
+      if (pm) finalAssetId = pm.linkedAssetId;
+    }
 
     if (editingTransaction) {
       await updateTransaction(
@@ -149,9 +180,10 @@ export default function FlowScreen() {
         isFixed,
         date,
         category,
-        assetId,
+        finalAssetId,
         toAssetId,
-        numRecurringDay
+        numRecurringDay,
+        paymentMethodId
       );
     } else {
       await addTransaction(
@@ -161,9 +193,10 @@ export default function FlowScreen() {
         isFixed,
         date,
         category,
-        assetId,
+        finalAssetId,
         toAssetId,
-        numRecurringDay
+        numRecurringDay,
+        paymentMethodId
       );
     }
 
@@ -178,7 +211,9 @@ export default function FlowScreen() {
     setDate(new Date().toISOString().split("T")[0]);
     setShowDatePicker(false);
     setCategory("기타");
+    setIsCategoryAccordionOpen(false);
     setAssetId(assets.length > 0 ? assets[0].id : undefined);
+    setPaymentMethodId(paymentMethods.length > 0 ? paymentMethods[0].id : undefined);
     setToAssetId(undefined);
     setEditingTransaction(null);
   };
@@ -461,25 +496,58 @@ export default function FlowScreen() {
                 placeholder="어디에 쓰셨나요?"
                 placeholderTextColor={colors.textMuted}
                 value={description}
-                onChangeText={setDescription}
+                onChangeText={handleDescriptionChange}
               />
 
-              {/* Asset Picker (Payment Method) */}
-              <AppText style={[styles.sectionLabel, { color: colors.textMuted }]}>결제 수단 / 자산</AppText>
+              {/* Asset Picker (Payment Method / Asset) */}
+              <AppText style={[styles.sectionLabel, { color: colors.textMuted }]}>
+                {type === "expense" ? "결제 수단" : "자산 선택"}
+              </AppText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.assetScroll}>
-                {assets.map(asset => (
-                  <TouchableOpacity
-                    key={asset.id}
-                    style={[
-                      styles.assetBtn,
-                      assetId === asset.id && { backgroundColor: colors.accent, borderColor: colors.accent },
-                      assetId !== asset.id && { borderColor: colors.cardBorder, backgroundColor: colors.bgSecondary }
-                    ]}
-                    onPress={() => setAssetId(asset.id)}
-                  >
-                    <AppText style={{ color: assetId === asset.id ? "#FFF" : colors.text, fontWeight: "600" }}>{asset.name}</AppText>
-                  </TouchableOpacity>
-                ))}
+                {type === "expense" && paymentMethods.length > 0 ? (
+                  paymentMethods.map(pm => (
+                    <TouchableOpacity
+                      key={`pm-${pm.id}`}
+                      style={[
+                        styles.assetBtn,
+                        paymentMethodId === pm.id && { backgroundColor: colors.accent, borderColor: colors.accent },
+                        paymentMethodId !== pm.id && { borderColor: colors.cardBorder, backgroundColor: colors.bgSecondary }
+                      ]}
+                      onPress={() => {
+                        setPaymentMethodId(pm.id);
+                        setAssetId(pm.linkedAssetId);
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons 
+                          name={pm.type === 'credit' ? 'card' : pm.type === 'debit' ? 'card-outline' : 'cash-outline'} 
+                          size={14} 
+                          color={paymentMethodId === pm.id ? "#FFF" : colors.textSecondary} 
+                        />
+                        <AppText style={{ color: paymentMethodId === pm.id ? "#FFF" : colors.text, fontWeight: "600" }}>
+                          {pm.name}
+                        </AppText>
+                      </View>
+                      <AppText style={{ fontSize: 10, color: paymentMethodId === pm.id ? "rgba(255,255,255,0.7)" : colors.textMuted, marginTop: 2 }}>
+                        {assets.find(a => a.id === pm.linkedAssetId)?.name || '연결계좌 없음'}
+                      </AppText>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  assets.map(asset => (
+                    <TouchableOpacity
+                      key={`asset-${asset.id}`}
+                      style={[
+                        styles.assetBtn,
+                        assetId === asset.id && { backgroundColor: colors.accent, borderColor: colors.accent },
+                        assetId !== asset.id && { borderColor: colors.cardBorder, backgroundColor: colors.bgSecondary }
+                      ]}
+                      onPress={() => setAssetId(asset.id)}
+                    >
+                      <AppText style={{ color: assetId === asset.id ? "#FFF" : colors.text, fontWeight: "600" }}>{asset.name}</AppText>
+                    </TouchableOpacity>
+                  ))
+                )}
               </ScrollView>
 
               {type === "transfer" && (
@@ -503,53 +571,76 @@ export default function FlowScreen() {
                 </>
               )}
 
-              {/* Hierarchical Category Picker: Two-Step Selection */}
+              {/* Hierarchical Category Picker: Accordion */}
               <View style={{ marginBottom: 24 }}>
                 <AppText style={[styles.sectionLabel, { color: colors.textMuted }]}>분류 선택</AppText>
                 
-                {/* 1st Step: Group Selection (Horizontal Scroll Tags) */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.groupScroll}>
-                  {CATEGORY_CATALOG[type].map(group => (
-                    <TouchableOpacity
-                      key={group.id}
-                      style={[
-                        styles.groupTag,
-                        selectedGroupId === group.id && { backgroundColor: type === 'expense' ? colors.danger : colors.accent, borderColor: 'transparent' },
-                        selectedGroupId !== group.id && { backgroundColor: colors.bgSecondary, borderColor: colors.cardBorder }
-                      ]}
-                      onPress={() => {
-                        setSelectedGroupId(group.id);
-                        // Auto-select first sub-category if not already in this group
-                        if (group.subCategories.length > 0) {
-                          setCategory(group.subCategories[0].label);
-                        } else {
-                          setCategory(group.label);
-                        }
-                      }}
-                    >
-                      <Ionicons name={group.icon as any} size={14} color={selectedGroupId === group.id ? "#FFF" : colors.textSecondary} />
-                      <AppText style={[styles.groupTagText, { color: selectedGroupId === group.id ? "#FFF" : colors.text }]}>{group.label}</AppText>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                <TouchableOpacity 
+                  style={[styles.input, { borderColor: colors.inputBorder, backgroundColor: colors.input, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setIsCategoryAccordionOpen(!isCategoryAccordionOpen);
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Ionicons name={getCategoryIcon(category)} size={20} color={colors.text} />
+                    <AppText style={{ color: colors.text, fontSize: 16 }}>{category}</AppText>
+                  </View>
+                  <Ionicons name={isCategoryAccordionOpen ? "chevron-up" : "chevron-down"} size={20} color={colors.textMuted} />
+                </TouchableOpacity>
 
-                {/* 2nd Step: Sub-Category Selection (Grid of compact tags) */}
-                {selectedGroupId && (
-                  <View style={styles.subCategoryRow}>
-                    {CATEGORY_CATALOG[type].find(g => g.id === selectedGroupId)?.subCategories.map(sub => (
-                      <TouchableOpacity
-                        key={sub.id}
-                        style={[
-                          styles.subTag,
-                          category === sub.label && { backgroundColor: isDark ? colors.accentBg : '#E8EEFF', borderColor: colors.accent },
-                          category !== sub.label && { borderColor: colors.cardBorder, backgroundColor: 'transparent' }
-                        ]}
-                        onPress={() => setCategory(sub.label)}
-                      >
-                        <AppText style={[styles.subTagText, { color: category === sub.label ? colors.accent : colors.textMuted }]}>
-                          {sub.label}
-                        </AppText>
-                      </TouchableOpacity>
+                {isCategoryAccordionOpen && (
+                  <View style={{ backgroundColor: isDark ? colors.bgSecondary : "#f8f9fb", borderRadius: 16, overflow: "hidden", marginTop: -8, marginBottom: 8, padding: 8 }}>
+                    {CATEGORY_CATALOG[type].map(group => (
+                      <View key={group.id}>
+                        <TouchableOpacity
+                          style={[
+                            styles.groupRow,
+                            selectedGroupId === group.id && { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)", borderRadius: 12 }
+                          ]}
+                          onPress={() => {
+                            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                            if (group.subCategories.length === 0) {
+                              setCategory(group.label);
+                              setSelectedGroupId(group.id);
+                              setIsCategoryAccordionOpen(false);
+                            } else {
+                              setSelectedGroupId(selectedGroupId === group.id ? null : group.id);
+                            }
+                          }}
+                        >
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                            <Ionicons name={group.icon as any} size={18} color={selectedGroupId === group.id ? colors.text : colors.textMuted} />
+                            <AppText style={{ fontSize: 15, fontWeight: selectedGroupId === group.id ? "700" : "500", color: selectedGroupId === group.id ? colors.text : colors.textMuted }}>{group.label}</AppText>
+                          </View>
+                          {group.subCategories.length > 0 && (
+                            <Ionicons name={selectedGroupId === group.id ? "chevron-up" : "chevron-down"} size={16} color={colors.textMuted} />
+                          )}
+                        </TouchableOpacity>
+                        
+                        {selectedGroupId === group.id && group.subCategories.length > 0 && (
+                          <View style={styles.subCategoryGrid}>
+                            {group.subCategories.map(sub => (
+                              <TouchableOpacity
+                                key={sub.id}
+                                style={[
+                                  styles.subTagSmall,
+                                  category === sub.label && { backgroundColor: isDark ? colors.accentBg : '#E8EEFF', borderColor: colors.accent },
+                                  category !== sub.label && { backgroundColor: "transparent", borderColor: colors.cardBorder }
+                                ]}
+                                onPress={() => {
+                                  setCategory(sub.label);
+                                  setIsCategoryAccordionOpen(false);
+                                }}
+                              >
+                                <AppText style={{ fontSize: 13, color: category === sub.label ? colors.accent : colors.textMuted }}>
+                                  {sub.label}
+                                </AppText>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        )}
+                      </View>
                     ))}
                   </View>
                 )}
@@ -767,31 +858,25 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   
   // Hierarchical Category Styles
-  groupScroll: { marginBottom: 12 },
-  groupTag: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingHorizontal: 16, 
-    paddingVertical: 10, 
-    borderRadius: 20, 
-    marginRight: 8, 
-    borderWidth: 1,
-    gap: 6
+  groupRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
   },
-  groupTagText: { fontSize: 14, fontWeight: '700' },
-  subCategoryRow: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    gap: 8, 
-    paddingTop: 4 
+  subCategoryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
   },
-  subTag: { 
-    paddingHorizontal: 14, 
-    paddingVertical: 6, 
-    borderRadius: 8, 
+  subTagSmall: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
   },
-  subTagText: { fontSize: 13, fontWeight: '600' },
 
   toggleRow: {
     flexDirection: "row",

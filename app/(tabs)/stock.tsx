@@ -18,6 +18,7 @@ import { formatNumber } from "../../src/utils/format";
 import { AssetWizardModal } from "../../src/components/AssetWizardModal";
 import { LoanWizardModal } from "../../src/components/LoanWizardModal";
 import { DebtManageWizardModal } from "../../src/components/DebtManageWizardModal";
+import { PaymentMethodWizardModal } from "../../src/components/PaymentMethodWizardModal";
 
 export default function StockScreen() {
   const { colors, isDark } = useAppTheme();
@@ -29,6 +30,7 @@ export default function StockScreen() {
   const [wizardVisible, setWizardVisible] = useState(false);
   const [loanWizardVisible, setLoanWizardVisible] = useState(false);
   const [debtManageVisible, setDebtManageVisible] = useState(false);
+  const [paymentMethodVisible, setPaymentMethodVisible] = useState(false);
   const [editingAsset, setEditingAsset] = useState<any>(null);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -60,6 +62,10 @@ export default function StockScreen() {
 
   const openDebtManageModal = () => {
     setDebtManageVisible(true);
+  };
+
+  const openPaymentMethodModal = () => {
+    setPaymentMethodVisible(true);
   };
 
   const openEditModal = (asset: any) => {
@@ -110,8 +116,15 @@ export default function StockScreen() {
           style={[styles.wizardBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.cardBorder }]}
           onPress={openLoanWizardModal}
         >
-          <Ionicons name="card-outline" size={15} color={colors.textSecondary} />
+          <Ionicons name="documents-outline" size={15} color={colors.textSecondary} />
           <AppText style={[styles.wizardBtnText, { color: colors.textSecondary }]}>대출등록</AppText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.wizardBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.cardBorder }]}
+          onPress={openPaymentMethodModal}
+        >
+          <Ionicons name="card-outline" size={15} color={colors.textSecondary} />
+          <AppText style={[styles.wizardBtnText, { color: colors.textSecondary }]}>카드등록</AppText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.wizardBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.cardBorder }]}
@@ -380,6 +393,11 @@ export default function StockScreen() {
       <DebtManageWizardModal
         visible={debtManageVisible}
         onClose={() => setDebtManageVisible(false)}
+      />
+
+      <PaymentMethodWizardModal
+        visible={paymentMethodVisible}
+        onClose={() => setPaymentMethodVisible(false)}
       />
     </SafeAreaView>
   );
